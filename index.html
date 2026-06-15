@@ -701,6 +701,32 @@ const DB = {
         }
     }
 };
+async function initApp() {
+    try {
+        // 1. ดึงข้อมูล User ล่าสุดจาก Supabase
+        const savedUser = await DB.get('current_user');
+        if (savedUser) {
+            CU = savedUser;
+        }
+
+        // 2. ดึงข้อมูล Markers ล่าสุดจาก Supabase
+        const savedMarkers = await DB.get('markers');
+        if (savedMarkers) {
+            markers = savedMarkers;
+        }
+        
+        console.log("โหลดข้อมูลจาก Supabase สำเร็จ!");
+
+        // 3. สั่งให้เว็บแสดงผลหลังจากข้อมูลออนไลน์โหลดมาเสร็จแล้ว
+        if (typeof render === 'function') render();
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof initMap === 'function') initMap(); 
+        
+    } catch (e) {
+        console.error("โหลดข้อมูลเริ่มต้นล้มเหลว:", e);
+    }
+}
+// สั่งให้ระบบเริ่มทำงานทันทีหลังจากสร้างฟังก์ชันเสร็จ
 
 
 // ── State ──
@@ -712,7 +738,8 @@ let imgs = {};
 let curRoom = null;
 let adminRoom = null;
 let gps = { lat:7.0066, lng:100.5018 };
-
+// ย้ายมาสั่งให้ทำงานตรงนี้ (หลังจากตัวแปร CU และ markers ถูกสร้างขึ้นมาเรียบร้อยแล้ว)
+initApp();
 // ── Helper ──
 const qs = s => document.querySelector(s);
 const qsi = id => document.getElementById(id);
