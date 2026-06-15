@@ -454,7 +454,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--cream);color:var(--text);
         <div class="card" style="margin-bottom:0.9rem"><div class="ct">🌿 คาร์บอนสะสม</div><div style="font-family:'Space Mono',monospace;font-size:2rem;color:var(--leaf);font-weight:700" id="hcarbon">0</div><div style="font-size:0.73rem;color:var(--muted)">กก. CO₂/ปี รวมทั้งหมด</div></div>
         <div class="card"><div class="ct">🏆 Top นักสำรวจ</div><div id="hlb"><div class="empty"><div class="ei">🏅</div><p>ยังไม่มีข้อมูล</p></div></div></div>
       </div>
-    </div>
+    </div
   </div>
 
   <!-- ANALYZE -->
@@ -647,17 +647,61 @@ body{font-family:'Sarabun',sans-serif;background:var(--cream);color:var(--text);
 
 </div><!-- /main -->
 </div><!-- /app -->
-<script>
-// ══════════════════════════════════════════════
-//  ARBOR Ai v2 — Full Application Logic
-// ══════════════════════════════════════════════
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-// ── LocalStorage DB ──
+<script>
+// ARBOR Ai v2 - Full Application Logic
+
+// 2. ตั้งค่าเชื่อมต่อระบบฐานข้อมูล Supabase ด้วยคีย์ของคุณ
+const SUPABASE_URL = "https://phpxehsfywxviafikwuw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_SKz9FHA2hjEcA4B2RSKuuQ_ZWD4_T6T";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// — Supabase Cloud DB (แปลงร่างจาก LocalStorage เดิม) —
 const DB = {
-  get: k => { try { return JSON.parse(localStorage.getItem('arbor2_'+k)); } catch(e){ return null; } },
-  set: (k,v) => { localStorage.setItem('arbor2_'+k, JSON.stringify(v)); },
-  del: k => localStorage.removeItem('arbor2_'+k),
+    // ฟังก์ชันดึงข้อมูลจาก Cloud
+    get: async (k) => {
+        try {
+            const { data, error } = await supabase
+                .from('arbor_storage')
+                .select('value')
+                .eq('key', 'arbor2_' + k)
+                .single();
+            
+            if (error || !data) return null;
+            return JSON.parse(data.value);
+        } catch(e) { 
+            return null; 
+        }
+    },
+    
+    // ฟังก์ชันบันทึกข้อมูลขึ้น Cloud
+    set: async (k, v) => {
+        try {
+            await supabase
+                .from('arbor_storage')
+                .upsert({ 
+                    key: 'arbor2_' + k, 
+                    value: JSON.stringify(v) 
+                }, { onConflict: 'key' });
+        } catch(e) {
+            console.error("เซฟข้อมูลล้มเหลว:", e);
+        }
+    },
+    
+    // ฟังก์ชันลบข้อมูลบน Cloud
+    del: async (k) => {
+        try {
+            await supabase
+                .from('arbor_storage')
+                .delete()
+                .eq('key', 'arbor2_' + k);
+        } catch(e) {
+            console.error("ลบข้อมูลล้มเหลว:", e);
+        }
+    }
 };
+
 
 // ── State ──
 let CU = null; // current user
