@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARBOR Ai — รุกขกรดิจิทัล</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Sarabun:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --forest:#1a2e1a;--canopy:#2d5a27;--leaf:#4a8c3f;--mint:#8ebe7e;
+  --bark:#5c3d2e;--soil:#3b2416;--parchment:#f5f0e8;--cream:#faf7f2;
+  --safe:#2e7d32;--watch:#e65100;--high:#b71c1c;--crisis:#212121;
+  --blue:#1565c0;--text:#1a2014;--muted:#6a7e64;--border:rgba(74,140,63,0.14);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Sarabun',sans-serif;background:var(--cream);color:var(--text);overflow-x:hidden;}
+
+/* AUTH */
+#auth-screen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,var(--forest) 0%,var(--canopy) 100%);display:flex;align-items:center;justify-content:center;}
+.auth-box{background:#fff;border-radius:14px;padding:2.5rem;width:100%;max-width:430px;box-shadow:0 32px 80px rgba(0,0,0,0.35);}
+.auth-logo{text-align:center;margin-bottom:1.5rem;}
+.auth-logo h1{font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:900;color:var(--forest);}
+.auth-logo h1 em{color:var(--leaf);font-style:italic;}
+.auth-logo p{font-size:0.78rem;color:var(--muted);margin-top:0.3rem;letter-spacing:0.03em;}
+.auth-tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:1.5rem;}
+.auth-tab{flex:1;padding:0.6rem;text-align:center;font-size:0.84rem;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;}
+.auth-tab.active{color:var(--leaf);border-bottom-color:var(--leaf);}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+.fg{margin-bottom:0.9rem;}
+.fg label{display:block;font-size:0.78rem;font-weight:600;color:var(--forest);margin-bottom:0.35rem;}
+.fg input,.fg select,.fg textarea{width:100%;padding:0.62rem 0.9rem;border:1.5px solid var(--border);border-radius:7px;font-family:'Sarabun',sans-serif;font-size:0.88rem;color:var(--text);background:#fff;transition:border 0.2s;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--leaf);}
+.fg textarea{resize:vertical;min-height:70px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
+.pdpa-box{background:linear-gradient(135deg,#f0f7f0,#e8f5e9);border:1px solid rgba(74,140,63,0.2);border-radius:8px;padding:0.9rem;margin-bottom:1rem;font-size:0.76rem;color:#3d5c35;line-height:1.6;}
+.pdpa-box strong{color:var(--forest);display:block;margin-bottom:0.3rem;}
+.cb-row{display:flex;align-items:flex-start;gap:0.55rem;font-size:0.8rem;margin-bottom:0.55rem;cursor:pointer;}
+.cb-row input{width:15px;height:15px;margin-top:2px;flex-shrink:0;accent-color:var(--leaf);}
+.btn-auth{width:100%;padding:0.82rem;border:none;border-radius:8px;background:var(--leaf);color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;margin-top:0.3rem;}
+.btn-auth:hover{background:var(--canopy);transform:translateY(-1px);}
+.auth-err{background:rgba(183,28,28,0.07);border:1px solid rgba(183,28,28,0.18);border-radius:6px;padding:0.55rem 0.85rem;font-size:0.8rem;color:var(--high);margin-bottom:0.8rem;display:none;}
+.auth-err.show{display:block;}
+
+/* SIDEBAR */
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:228px;background:var(--forest);z-index:200;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.04);transition:transform 0.3s;}
+.sb-logo{padding:1.3rem 1.3rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.05);}
+.sb-logo-text{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--mint);}
+.sb-logo-text em{color:rgba(255,255,255,0.6);font-style:italic;}
+.sb-logo-sub{font-size:0.58rem;color:rgba(255,255,255,0.28);letter-spacing:0.1em;margin-top:0.25rem;}
+.sb-user{padding:0.85rem 1.3rem;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:0.7rem;}
+.sb-av{width:34px;height:34px;border-radius:50%;background:var(--canopy);color:var(--mint);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;flex-shrink:0;}
+.sb-ui{flex:1;min-width:0;}
+.sb-uname{font-size:0.8rem;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-urole{font-size:0.62rem;color:rgba(255,255,255,0.32);letter-spacing:0.04em;}
+.sb-nav{flex:1;padding:0.7rem 0;overflow-y:auto;}
+.sb-sec{font-family:'Space Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;color:rgba(255,255,255,0.18);text-transform:uppercase;padding:0.75rem 1.3rem 0.25rem;}
+.sb-link{display:flex;align-items:center;gap:0.75rem;padding:0.58rem 1.3rem;color:rgba(255,255,255,0.52);font-size:0.83rem;cursor:pointer;transition:all 0.15s;border:none;background:none;width:100%;text-align:left;}
+.sb-link:hover{color:#fff;background:rgba(255,255,255,0.04);}
+.sb-link.active{color:var(--mint);background:rgba(138,190,126,0.1);border-right:2px solid var(--mint);}
+.sb-link .ic{font-size:0.95rem;width:19px;text-align:center;}
+.sb-logout{padding:0.9rem 1.3rem;border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:0.7rem;color:rgba(255,255,255,0.3);font-size:0.79rem;cursor:pointer;transition:color 0.2s;background:none;border-bottom:none;border-left:none;border-right:none;width:100%;}
+.sb-logout:hover{color:rgba(255,120,120,0.8);}
+
+/* MAIN */
+#main{margin-left:228px;min-height:100vh;}
+#topbar{position:sticky;top:0;z-index:100;background:rgba(250,247,242,0.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0.72rem 1.8rem;display:flex;align-items:center;justify-content:space-between;}
+.tb-title{font-size:0.92rem;font-weight:600;color:var(--forest);}
+.tb-right{display:flex;align-items:center;gap:0.75rem;}
+.notif-btn{position:relative;background:none;border:none;cursor:pointer;font-size:1.15rem;padding:0.2rem;}
+.ndot{position:absolute;top:0;right:0;width:8px;height:8px;background:var(--high);border-radius:50%;border:2px solid var(--cream);display:none;}
+.crisis-badge{background:rgba(183,28,28,0.1);color:var(--high);font-size:0.7rem;font-weight:600;padding:0.28rem 0.75rem;border-radius:20px;display:none;align-items:center;gap:0.38rem;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--high);animation:pulse 1.4s infinite;}
+
+/* PAGES */
+.page{display:none;padding:1.7rem 1.8rem;}
+.page.active{display:block;}
+.ph{margin-bottom:1.4rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;}
+.ph h2{font-family:'Playfair Display',serif;font-size:1.45rem;color:var(--forest);}
+.ph p{font-size:0.8rem;color:var(--muted);margin-top:0.15rem;}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:1.3rem;}
+.ct{font-family:'Space Mono',monospace;font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--leaf);margin-bottom:0.9rem;display:flex;align-items:center;justify-content:space-between;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+.g3{display:grid;grid-template-columns:2fr 1fr;gap:1.1rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0.9rem;margin-bottom:1.3rem;}
+.sc{background:#fff;border:1px solid var(--border);border-radius:9px;padding:1.1rem;}
+.sn{font-family:'Space Mono',monospace;font-size:1.75rem;font-weight:700;color:var(--forest);line-height:1;}
+.sn.g{color:var(--safe)} .sn.r{color:var(--high)} .sn.a{color:var(--watch)}
+.sl{font-size:0.73rem;color:var(--muted);margin-top:0.28rem;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:0.38rem;padding:0.58rem 1.1rem;border-radius:7px;font-size:0.82rem;font-weight:600;cursor:pointer;border:none;transition:all 0.18s;font-family:'Sarabun',sans-serif;text-decoration:none;}
+.btn-p{background:var(--leaf);color:#fff;} .btn-p:hover{background:var(--canopy);transform:translateY(-1px);}
+.btn-s{background:#fff;color:var(--forest);border:1.5px solid var(--border);} .btn-s:hover{border-color:var(--leaf);}
+.btn-d{background:rgba(183,28,28,0.07);color:var(--high);border:1px solid rgba(183,28,28,0.18);} .btn-d:hover{background:var(--high);color:#fff;}
+.btn-w{background:rgba(230,81,0,0.07);color:var(--watch);border:1px solid rgba(230,81,0,0.18);}
+.btn-sm{padding:0.33rem 0.78rem;font-size:0.76rem;}
+.btn-xs{padding:0.22rem 0.55rem;font-size:0.68rem;}
+
+/* RISK TAGS */
+.rt{display:inline-block;padding:0.16rem 0.52rem;border-radius:4px;font-size:0.68rem;font-weight:700;font-family:'Space Mono',monospace;}
+.rt.safe{background:rgba(46,125,50,0.1);color:var(--safe);}
+.rt.watch{background:rgba(230,81,0,0.1);color:var(--watch);}
+.rt.high{background:rgba(183,28,28,0.1);color:var(--high);}
+.rt.crisis{background:rgba(33,33,33,0.08);color:#333;}
+
+/* STATUS */
+.sp{display:inline-flex;align-items:center;gap:0.28rem;padding:0.2rem 0.65rem;border-radius:20px;font-size:0.68rem;font-weight:600;}
+.sp.pending{background:rgba(230,81,0,0.09);color:var(--watch);}
+.sp.progress{background:rgba(21,101,192,0.09);color:var(--blue);}
+.sp.done{background:rgba(46,125,50,0.09);color:var(--safe);}
+.sp.alert{background:rgba(183,28,28,0.09);color:var(--high);}
+
+/* FEED */
+.fi{display:flex;gap:0.85rem;padding:0.7rem 0;border-bottom:1px solid rgba(74,140,63,0.06);font-size:0.82rem;align-items:flex-start;}
+.fi:last-child{border-bottom:none;}
+.fd{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.fd.crisis{background:#333} .fd.high{background:var(--high)} .fd.watch{background:var(--watch)} .fd.safe{background:var(--safe)}
+.ft{flex:1;line-height:1.5;color:#4a5c44;}
+.ftm{font-size:0.67rem;color:var(--muted);white-space:nowrap;}
+
+/* TABLE */
+.dtable{width:100%;border-collapse:collapse;font-size:0.81rem;}
+.dtable th{text-align:left;padding:0.62rem 0.9rem;font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--leaf);border-bottom:2px solid var(--border);background:#fafaf8;}
+.dtable td{padding:0.72rem 0.9rem;border-bottom:1px solid rgba(74,140,63,0.06);vertical-align:middle;}
+.dtable tr:hover td{background:rgba(74,140,63,0.02);}
+
+/* HOME HERO */
+.hero{background:linear-gradient(135deg,var(--forest) 0%,#2a4a20 60%,var(--canopy) 100%);border-radius:11px;padding:2.3rem;margin-bottom:1.4rem;position:relative;overflow:hidden;}
+.hero::after{content:'🌳';position:absolute;right:1.5rem;bottom:-0.8rem;font-size:7rem;opacity:0.07;}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.1rem;color:#fff;margin-bottom:0.4rem;}
+.hero h1 em{color:var(--mint);font-style:italic;}
+.hero p{color:rgba(255,255,255,0.6);margin-bottom:1.4rem;font-size:0.9rem;}
+.hbtns{display:flex;gap:0.7rem;flex-wrap:wrap;}
+.hbtn{padding:0.68rem 1.35rem;border-radius:7px;font-weight:700;font-size:0.86rem;cursor:pointer;border:none;font-family:'Sarabun',sans-serif;transition:all 0.2s;}
+.hbtn.pr{background:var(--mint);color:var(--forest);} .hbtn.pr:hover{background:#a0d490;}
+.hbtn.gh{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);} .hbtn.gh:hover{background:rgba(255,255,255,0.16);}
+
+/* ANALYZE */
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start;}
+.pslots{display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.9rem;}
+.pslot{aspect-ratio:1;border:1.5px dashed rgba(74,140,63,0.28);border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;overflow:hidden;position:relative;background:#fafaf8;font-size:0.7rem;color:var(--muted);text-align:center;padding:0.35rem;}
+.pslot:hover{border-color:var(--leaf);}
+.pslot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.pslot .si{font-size:1.4rem;margin-bottom:0.25rem;}
+.pslot.filled .slabel{display:none;}
+.pslot.filled::after{content:'✅';position:absolute;top:3px;right:4px;font-size:0.75rem;}
+.gchip{display:inline-flex;align-items:center;gap:0.38rem;background:rgba(21,101,192,0.07);color:var(--blue);border:1px solid rgba(21,101,192,0.14);border-radius:20px;padding:0.28rem 0.75rem;font-size:0.72rem;font-weight:600;}
+.box360{background:rgba(21,101,192,0.04);border:1px solid rgba(21,101,192,0.14);border-radius:7px;padding:0.85rem;margin-bottom:0.8rem;}
+.box360 h5{font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:0.35rem;}
+.box360 p{font-size:0.76rem;color:var(--muted);margin-bottom:0.5rem;}
+
+/* RESULT */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.result-anim{animation:fadeUp 0.4s ease;}
+.rbadge{display:flex;align-items:center;gap:0.9rem;padding:0.95rem 1.1rem;border-radius:8px;margin-bottom:1.1rem;}
+.rbadge.safe{background:rgba(46,125,50,0.07);border:1.5px solid var(--safe);}
+.rbadge.watch{background:rgba(230,81,0,0.07);border:1.5px solid var(--watch);}
+.rbadge.high{background:rgba(183,28,28,0.07);border:1.5px solid var(--high);}
+.rbadge.crisis{background:rgba(33,33,33,0.05);border:1.5px solid #555;}
+.rbi{font-size:1.9rem;}
+.rbl{font-family:'Space Mono',monospace;font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;}
+.rbadge.safe .rbl{color:var(--safe)} .rbadge.watch .rbl{color:var(--watch)} .rbadge.high .rbl{color:var(--high)} .rbadge.crisis .rbl{color:#333}
+.rbd{font-size:0.8rem;color:var(--muted);margin-top:0.18rem;}
+.crow{display:flex;align-items:center;justify-content:space-between;padding:0.48rem 0;border-bottom:1px solid rgba(74,140,63,0.06);font-size:0.82rem;}
+.crow:last-child{border-bottom:none;}
+.cbar{width:65px;height:5px;background:#eee;border-radius:3px;overflow:hidden;flex-shrink:0;}
+.cf{height:100%;border-radius:3px;}
+.cf.g{background:var(--safe)} .cf.y{background:var(--watch)} .cf.r{background:var(--high)}
+.ri{display:flex;gap:0.65rem;padding:0.48rem 0.65rem;border-radius:5px;background:rgba(74,140,63,0.04);margin-bottom:0.45rem;font-size:0.81rem;}
+.rn{width:18px;height:18px;border-radius:50%;background:var(--leaf);color:#fff;font-size:0.6rem;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;margin-top:1px;}
+
+/* 3D TREE */
+.tree3d-wrap{background:var(--forest);border-radius:8px;padding:1.2rem;text-align:center;margin-bottom:1rem;}
+.tree3d-wrap h4{font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--mint);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.9rem;}
+.tree3d{width:160px;height:200px;margin:0 auto;position:relative;transform-style:preserve-3d;animation:r3d 8s linear infinite;}
+@keyframes r3d{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
+.t3trunk{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:22px;height:65px;border-radius:3px 3px 2px 2px;}
+.t3trunk.ok{background:linear-gradient(to right,#5c3d2e,#8b5e3c,#5c3d2e);}
+.t3trunk.dmg{background:linear-gradient(to right,#3d2010,#5c3015,#3d2010);}
+.t3c{position:absolute;left:50%;transform:translateX(-50%);border-radius:50% 50% 40% 40%;box-shadow:inset -8px -8px 16px rgba(0,0,0,0.3);}
+.t3c.ok1{width:115px;height:95px;bottom:50px;background:radial-gradient(ellipse,#2d5a27,#1a3d18);}
+.t3c.ok2{width:95px;height:85px;bottom:85px;background:radial-gradient(ellipse,#3a7032,#22511e);}
+.t3c.ok3{width:65px;height:65px;bottom:125px;background:radial-gradient(ellipse,#4a8c3f,#2d5a27);}
+.t3c.dmg1{width:115px;height:95px;bottom:50px;background:radial-gradient(ellipse,#6a7a15,#4a5508);}
+.t3c.dmg2{width:95px;height:85px;bottom:85px;background:radial-gradient(ellipse,#7a8520,#5a6010);}
+.t3c.dmg3{width:65px;height:65px;bottom:125px;background:radial-gradient(ellipse,#8a9528,#6a7515);}
+.t3spot{position:absolute;border-radius:50%;background:rgba(139,69,19,0.55);}
+.t3shadow{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:90px;height:14px;background:rgba(0,0,0,0.28);border-radius:50%;filter:blur(4px);}
+
+/* CONTACT CARD */
+.ccard{background:rgba(21,101,192,0.04);border:1px solid rgba(21,101,192,0.14);border-radius:7px;padding:0.9rem;margin-top:0.75rem;}
+.ccard h5{font-size:0.78rem;font-weight:700;color:var(--blue);margin-bottom:0.55rem;display:flex;align-items:center;gap:0.38rem;}
+.ci{display:flex;gap:0.55rem;font-size:0.78rem;padding:0.28rem 0;border-bottom:1px solid rgba(21,101,192,0.07);}
+.ci:last-child{border-bottom:none;}
+.cil{width:75px;color:var(--muted);flex-shrink:0;}
+
+/* MAP */
+#leaflet-map{height:490px;border-radius:9px;z-index:1;}
+.mbar{display:flex;gap:0.45rem;margin-bottom:0.8rem;flex-wrap:wrap;}
+.mbtn{padding:0.36rem 0.85rem;border-radius:20px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:0.77rem;cursor:pointer;transition:all 0.15s;}
+.mbtn.active{background:var(--forest);color:var(--mint);border-color:var(--forest);}
+.tli{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;border-radius:6px;margin-bottom:0.45rem;background:#fff;border:1px solid var(--border);cursor:pointer;transition:all 0.15s;font-size:0.81rem;}
+.tli:hover{border-color:var(--leaf);}
+.tld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.tld.safe{background:var(--safe)} .tld.watch{background:var(--watch)} .tld.high{background:var(--high)} .tld.crisis{background:#333}
+
+/* DASHBOARD CHARTS */
+.cbc{display:flex;align-items:flex-end;gap:3px;height:105px;margin-top:0.75rem;}
+.cb{flex:1;border-radius:3px 3px 0 0;min-width:0;transition:height 0.6s ease;cursor:pointer;position:relative;}
+.cb:hover::after{content:attr(data-tip);position:absolute;top:-20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:2px 5px;border-radius:3px;font-size:0.62rem;white-space:nowrap;z-index:10;}
+.clabels{display:flex;gap:3px;margin-top:3px;}
+.clabels span{flex:1;text-align:center;font-size:0.58rem;color:var(--muted);}
+.drow{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.55rem;font-size:0.79rem;}
+.dlabel{width:95px;color:var(--muted);flex-shrink:0;}
+.dbw{flex:1;height:13px;background:#eee;border-radius:3px;overflow:hidden;}
+.dbar{height:100%;border-radius:3px;background:var(--leaf);}
+.dval{width:52px;text-align:right;font-family:'Space Mono',monospace;font-size:0.68rem;}
+.dl-item{display:flex;align-items:center;gap:0.45rem;font-size:0.78rem;margin-bottom:0.35rem;}
+.dldot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* ENCYCLOPEDIA */
+.encg{display:grid;grid-template-columns:repeat(3,1fr);gap:0.9rem;}
+.encc{background:#fff;border:1px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all 0.2s;}
+.encc:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(26,46,26,0.09);}
+.eci{height:115px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--canopy),var(--forest));position:relative;overflow:hidden;}
+.eci img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+.ecemoji{font-size:3.2rem;position:relative;z-index:1;}
+.ecb{padding:0.85rem;}
+.ecname{font-weight:700;color:var(--forest);font-size:0.88rem;}
+.ecsci{font-size:0.7rem;color:var(--muted);font-style:italic;margin:0.18rem 0 0.45rem;}
+.ectags{display:flex;flex-wrap:wrap;gap:0.22rem;}
+.ectag{background:rgba(74,140,63,0.08);color:var(--leaf);padding:0.1rem 0.42rem;border-radius:2px;font-size:0.63rem;}
+.addbtn{border:2px dashed rgba(74,140,63,0.22);background:#fafaf8;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:195px;border-radius:9px;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:0.83rem;gap:0.45rem;}
+.addbtn:hover{border-color:var(--leaf);background:rgba(74,140,63,0.02);}
+
+/* COMMUNITY */
+.lbr{display:flex;align-items:center;gap:0.75rem;padding:0.62rem 0;border-bottom:1px solid rgba(74,140,63,0.06);font-size:0.83rem;}
+.lbr:last-child{border-bottom:none;}
+.lbrank{width:19px;font-family:'Space Mono',monospace;font-size:0.7rem;text-align:center;}
+.lbrank.g{color:#f2c94c} .lbrank.s{color:#9e9e9e} .lbrank.b{color:#ca7c47}
+.bdg-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-top:0.75rem;}
+.bdg-item{text-align:center;padding:0.9rem 0.4rem;border-radius:7px;border:1px solid var(--border);background:#fafaf8;}
+.bdg-item .bi{font-size:1.7rem;margin-bottom:0.28rem;}
+.bdg-item .bn{font-size:0.76rem;font-weight:700;color:var(--forest);}
+.bdg-item .br{font-size:0.65rem;color:var(--muted);}
+
+/* CHAT */
+.chat-layout{display:grid;grid-template-columns:255px 1fr;gap:0.9rem;height:590px;}
+.chat-list{border:1px solid var(--border);border-radius:9px;overflow-y:auto;background:#fff;}
+.chat-lh{padding:0.85rem 1rem;border-bottom:1px solid var(--border);font-size:0.78rem;font-weight:700;color:var(--forest);}
+.chat-li{padding:0.75rem 0.95rem;border-bottom:1px solid rgba(74,140,63,0.05);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:0.65rem;}
+.chat-li:hover{background:rgba(74,140,63,0.04);}
+.chat-li.active{background:rgba(74,140,63,0.07);}
+.chav{width:33px;height:33px;border-radius:50%;background:var(--canopy);color:var(--mint);display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;}
+.chat-liinfo{flex:1;min-width:0;}
+.chat-liname{font-size:0.81rem;font-weight:600;color:var(--forest);}
+.chat-liprev{font-size:0.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-unread{background:var(--high);color:#fff;border-radius:10px;padding:0.08rem 0.42rem;font-size:0.62rem;font-weight:700;}
+.chat-win{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden;}
+.chat-wh{padding:0.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.65rem;}
+.chat-msgs{flex:1;overflow-y:auto;padding:0.9rem;display:flex;flex-direction:column;gap:0.62rem;background:#fafaf8;}
+.msg{max-width:74%;padding:0.55rem 0.85rem;border-radius:10px;font-size:0.83rem;line-height:1.5;}
+.msg.sent{background:var(--leaf);color:#fff;align-self:flex-end;border-bottom-right-radius:3px;}
+.msg.recv{background:#fff;border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px;color:var(--text);}
+.msg-t{font-size:0.6rem;opacity:0.6;margin-top:0.18rem;}
+.chat-ir{padding:0.75rem 0.9rem;border-top:1px solid var(--border);display:flex;gap:0.55rem;}
+.chat-inp{flex:1;padding:0.58rem 0.85rem;border:1.5px solid var(--border);border-radius:20px;font-family:'Sarabun',sans-serif;font-size:0.85rem;outline:none;}
+.chat-inp:focus{border-color:var(--leaf);}
+.chat-send{padding:0.58rem 1rem;background:var(--leaf);color:#fff;border:none;border-radius:20px;cursor:pointer;font-weight:600;font-family:'Sarabun',sans-serif;}
+
+/* ADMIN */
+.atabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:1.1rem;flex-wrap:wrap;gap:0;}
+.atab{padding:0.52rem 1.1rem;font-size:0.81rem;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.15s;}
+.atab.active{color:var(--leaf);border-bottom-color:var(--leaf);}
+.asub{display:none;}
+.asub.active{display:block;}
+.staff-c{display:flex;align-items:center;gap:0.9rem;padding:0.9rem;border:1px solid var(--border);border-radius:8px;background:#fff;margin-bottom:0.65rem;}
+.staff-av{width:38px;height:38px;border-radius:50%;background:var(--canopy);color:var(--mint);display:flex;align-items:center;justify-content:center;font-weight:700;}
+.staff-info{flex:1;}
+.staff-name{font-weight:700;font-size:0.88rem;color:var(--forest);}
+.staff-email{font-size:0.72rem;color:var(--muted);}
+.staff-role{font-size:0.68rem;font-weight:600;padding:0.13rem 0.48rem;border-radius:3px;background:rgba(74,140,63,0.1);color:var(--leaf);}
+.agc{border:1px solid var(--border);border-radius:8px;background:#fff;padding:0.9rem;margin-bottom:0.65rem;display:flex;align-items:center;gap:0.9rem;}
+.agci{font-size:1.7rem;}
+.agcin{flex:1;}
+.agcn{font-weight:700;font-size:0.88rem;color:var(--forest);}
+.agcd{font-size:0.75rem;color:var(--muted);margin-top:0.18rem;}
+
+/* NOTIFICATIONS */
+.notif-panel{position:fixed;top:55px;right:0.9rem;width:310px;z-index:500;background:#fff;border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,0.12);display:none;max-height:390px;overflow-y:auto;}
+.notif-panel.show{display:block;}
+.nh{padding:0.75rem 0.95rem;border-bottom:1px solid var(--border);font-weight:700;font-size:0.83rem;color:var(--forest);display:flex;justify-content:space-between;align-items:center;}
+.ni{padding:0.75rem 0.95rem;border-bottom:1px solid rgba(74,140,63,0.06);font-size:0.8rem;cursor:pointer;}
+.ni:hover{background:rgba(74,140,63,0.03);}
+.ni.unread{background:rgba(74,140,63,0.04);}
+.nit{font-weight:600;color:var(--forest);margin-bottom:0.18rem;}
+.nib{color:var(--muted);}
+.nitm{font-size:0.65rem;color:var(--muted);margin-top:0.25rem;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.42);z-index:800;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:11px;max-width:570px;width:100%;max-height:90vh;overflow-y:auto;}
+.mh{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mh h3{font-family:'Playfair Display',serif;font-size:1.18rem;color:var(--forest);}
+.mc-btn{background:none;border:none;font-size:1.25rem;cursor:pointer;color:var(--muted);line-height:1;}
+.mb{padding:1.4rem;}
+.mf{padding:0.9rem 1.4rem;border-top:1px solid var(--border);display:flex;gap:0.65rem;justify-content:flex-end;}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.4rem;right:1.4rem;z-index:9000;background:var(--forest);color:#fff;padding:0.75rem 1.1rem;border-radius:7px;font-size:0.83rem;display:flex;align-items:center;gap:0.55rem;transform:translateY(70px);opacity:0;transition:all 0.3s;max-width:310px;box-shadow:0 4px 18px rgba(0,0,0,0.2);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-left:3px solid var(--mint);}
+.toast.error{border-left:3px solid var(--high);}
+.toast.warning{border-left:3px solid var(--watch);}
+
+/* PROGRESS */
+.prog-ov{position:fixed;inset:0;background:rgba(26,46,26,0.72);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:0.9rem;}
+.prog-ov.show{display:flex;}
+.spinner{width:50px;height:50px;border-radius:50%;border:4px solid rgba(138,190,126,0.18);border-top-color:var(--mint);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prog-t{color:#fff;font-size:0.88rem;}
+
+/* EMPTY */
+.empty{text-align:center;padding:2.8rem 1rem;color:var(--muted);}
+.empty .ei{font-size:2.8rem;margin-bottom:0.7rem;opacity:0.38;}
+.empty p{font-size:0.87rem;}
+
+/* SEARCH */
+.sbar{display:flex;gap:0.45rem;margin-bottom:0.9rem;}
+.sbar input{flex:1;padding:0.5rem 0.85rem;border:1.5px solid var(--border);border-radius:7px;font-family:'Sarabun',sans-serif;font-size:0.84rem;}
+.sbar input:focus{outline:none;border-color:var(--leaf);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%);} #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;} #menu-toggle{display:block;}
+  .g2,.g3,.ag,.encg,.chat-layout{grid-template-columns:1fr;}
+  .g4{grid-template-columns:1fr 1fr;}
+  #leaflet-map{height:320px;}
+}
+#menu-toggle{display:none;position:fixed;top:0.65rem;left:0.65rem;z-index:300;background:var(--forest);border:none;border-radius:6px;padding:0.42rem 0.58rem;color:#fff;font-size:1.05rem;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="prog-ov" id="prog"><div class="spinner"></div><p class="prog-t" id="prog-t">กำลังดำเนินการ...</p></div>
+<div class="toast" id="toast"></div>
+<div class="notif-panel" id="notif-panel">
+  <div class="nh">🔔 การแจ้งเตือน <button class="btn btn-xs btn-s" onclick="markAllRead()">อ่านทั้งหมด</button></div>
+  <div id="notif-list"></div>
+</div>
+<button id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+<div class="modal-overlay" id="modal" onclick="closeModalOuter(event)">
+  <div class="modal"><div class="mh"><h3 id="m-title"></h3><button class="mc-btn" onclick="closeModal()">✕</button></div>
+  <div class="mb" id="m-body"></div><div class="mf" id="m-foot"></div></div>
+</div>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="auth-screen">
+<div class="auth-box">
+  <div class="auth-logo">
+    <h1>ARBOR<em>Ai</em></h1>
+    <p>รุกขกรดิจิทัล · Digital Arborist AI · PSU Future Tech Challenge 2026</p>
+  </div>
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="switchTab('login')">เข้าสู่ระบบ</div>
+    <div class="auth-tab" onclick="switchTab('reg')">สมัครสมาชิก</div>
+  </div>
+  <div class="auth-form active" id="form-login">
+    <div class="auth-err" id="lerr"></div>
+    <div class="fg"><label>อีเมล</label><input type="email" id="li-em" placeholder="email@example.com"></div>
+    <div class="fg"><label>รหัสผ่าน</label><input type="password" id="li-pw" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-auth" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+  <div class="auth-form" id="form-reg">
+    <div class="auth-err" id="rerr"></div>
+    <div class="pdpa-box">
+      <strong>📋 นโยบายการเก็บข้อมูลส่วนบุคคล (PDPA)</strong>
+      ระบบจัดเก็บ: ชื่อ-นามสกุล, อีเมล, เบอร์โทรศัพท์ และพิกัด GPS (approximate) เพื่อประกอบการวิเคราะห์ต้นไม้เท่านั้น ไม่มีการขายหรือเปิดเผยข้อมูลแก่บุคคลภายนอก ภาพถ่ายจะถูกลบอัตโนมัติหลัง 30 วัน ท่านมีสิทธิ์ขอเข้าถึง แก้ไข หรือลบข้อมูลได้ตลอดเวลา
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>ชื่อ *</label><input type="text" id="rg-fn" placeholder="ชื่อ"></div>
+      <div class="fg"><label>นามสกุล *</label><input type="text" id="rg-ln" placeholder="นามสกุล"></div>
+    </div>
+    <div class="fg"><label>อีเมล *</label><input type="email" id="rg-em" placeholder="email@example.com"></div>
+    <div class="fg"><label>เบอร์โทรศัพท์ *</label><input type="tel" id="rg-ph" placeholder="08xxxxxxxx"></div>
+    <div class="fg"><label>สังกัด / หน่วยงาน</label><input type="text" id="rg-org" placeholder="เช่น ม.อ. หาดใหญ่ / เทศบาลนครหาดใหญ่"></div>
+    <div class="fg"><label>รหัสผ่าน * (อย่างน้อย 8 ตัวอักษร)</label><input type="password" id="rg-pw" placeholder="รหัสผ่าน"></div>
+    <div class="fg"><label>ยืนยันรหัสผ่าน *</label><input type="password" id="rg-pw2" placeholder="ยืนยันรหัสผ่าน" onkeydown="if(event.key==='Enter')doReg()"></div>
+    <div class="cb-row"><input type="checkbox" id="cb-pdpa"><label for="cb-pdpa">ยินยอมให้จัดเก็บข้อมูลส่วนบุคคลตามนโยบาย PDPA ข้างต้น *</label></div>
+    <div class="cb-row"><input type="checkbox" id="cb-terms"><label for="cb-terms">รับทราบว่าผลวิเคราะห์ AI เป็นเพียงการประมาณการ ควรให้ผู้เชี่ยวชาญยืนยันก่อนดำเนินการ *</label></div>
+    <button class="btn-auth" onclick="doReg()">สมัครสมาชิก</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" style="display:none">
+<div id="sidebar">
+  <div class="sb-logo"><div class="sb-logo-text">ARBOR<em>Ai</em></div><div class="sb-logo-sub">รุกขกรดิจิทัล · PSU 2026</div></div>
+  <div class="sb-user"><div class="sb-av" id="sb-av">?</div><div class="sb-ui"><div class="sb-uname" id="sb-un">-</div><div class="sb-urole" id="sb-ur">-</div></div></div>
+  <nav class="sb-nav">
+    <div class="sb-sec">หลัก</div>
+    <button class="sb-link active" onclick="go('home',this)"><span class="ic">🏠</span>หน้าหลัก</button>
+    <button class="sb-link" onclick="go('analyze',this)"><span class="ic">📸</span>วิเคราะห์ต้นไม้</button>
+    <button class="sb-link" onclick="go('map',this)"><span class="ic">🗺️</span>แผนที่ความเสี่ยง</button>
+    <button class="sb-link" onclick="go('dash',this)"><span class="ic">📊</span>Dashboard</button>
+    <div class="sb-sec">ชุมชน</div>
+    <button class="sb-link" onclick="go('enc',this)"><span class="ic">📚</span>สารานุกรมต้นไม้</button>
+    <button class="sb-link" onclick="go('comm',this)"><span class="ic">🏅</span>Community</button>
+    <button class="sb-link" onclick="go('chat',this)"><span class="ic">💬</span>ติดต่อเจ้าหน้าที่</button>
+    <button class="sb-link" onclick="go('myreports',this)"><span class="ic">📁</span>รายงานของฉัน</button>
+    <div class="sb-sec" id="adm-sec" style="display:none">แอดมิน</div>
+    <button class="sb-link" id="adm-btn" onclick="go('admin',this)" style="display:none"><span class="ic">⚙️</span>Admin Panel</button>
+  </nav>
+  <button class="sb-logout" onclick="doLogout()">🚪 ออกจากระบบ</button>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div class="tb-title" id="tbtitle">🏠 หน้าหลัก</div>
+    <div class="tb-right">
+      <button class="notif-btn" onclick="toggleNotif()">🔔<span class="ndot" id="ndot"></span></button>
+      <div class="crisis-badge" id="cbadge"><div class="pdot"></div><span id="cbtext">วิกฤต 0 ต้น</span></div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <h1>ARBOR<em>Ai</em></h1>
+      <p id="hw">ยินดีต้อนรับ · ถ่ายภาพ. วิเคราะห์. รู้ก่อนล้ม · หาดใหญ่ สงขลา</p>
+      <div class="hbtns">
+        <button class="hbtn pr" onclick="go('analyze',qs('[onclick*=analyze]'))">📸 เริ่มวิเคราะห์</button>
+        <button class="hbtn gh" onclick="go('map',qs('[onclick*=map]'))">🗺️ ดูแผนที่</button>
+      </div>
+    </div>
+    <div class="g4">
+      <div class="sc"><div class="sn" id="st0">0</div><div class="sl">🌳 รายงานทั้งหมด</div></div>
+      <div class="sc"><div class="sn r" id="st1">0</div><div class="sl">⚫ วิกฤต</div></div>
+      <div class="sc"><div class="sn a" id="st2">0</div><div class="sl">🔴 เสี่ยงสูง</div></div>
+      <div class="sc"><div class="sn g" id="st3">0</div><div class="sl">✅ ดำเนินการแล้ว</div></div>
+    </div>
+    <div class="g3">
+      <div class="card"><div class="ct">📡 กิจกรรมล่าสุด</div><div id="hfeed"><div class="empty"><div class="ei">🌿</div><p>ยังไม่มีกิจกรรม</p></div></div></div>
+      <div>
+        <div class="card" style="margin-bottom:0.9rem"><div class="ct">🌿 คาร์บอนสะสม</div><div style="font-family:'Space Mono',monospace;font-size:2rem;color:var(--leaf);font-weight:700" id="hcarbon">0</div><div style="font-size:0.73rem;color:var(--muted)">กก. CO₂/ปี รวมทั้งหมด</div></div>
+        <div class="card"><div class="ct">🏆 Top นักสำรวจ</div><div id="hlb"><div class="empty"><div class="ei">🏅</div><p>ยังไม่มีข้อมูล</p></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYZE -->
+  <div id="page-analyze" class="page">
+    <div class="ph"><div><h2>📸 วิเคราะห์ต้นไม้</h2><p>อัปโหลดภาพให้ AI วิเคราะห์สุขภาพ · หาดใหญ่ สงขลา</p></div></div>
+    <div class="ag">
+      <div>
+        <div class="card" style="margin-bottom:0.9rem">
+          <div class="ct">ภาพถ่าย 3 มุม <span style="font-size:0.6rem;font-weight:400;color:var(--muted)">ภาพรวม / โคนต้น / ใบและกิ่ง</span></div>
+          <div class="pslots">
+            <div class="pslot" id="sl1" onclick="trgUpload(1)"><div class="si">📷</div><div>ภาพรวมทั้งต้น</div><div style="font-size:0.6rem;color:rgba(106,126,100,0.65)">ถอยห่าง 3–5 ม.</div><div class="slabel"></div></div>
+            <div class="pslot" id="sl2" onclick="trgUpload(2)"><div class="si">📷</div><div>โคนต้น+ลำต้น</div><div style="font-size:0.6rem;color:rgba(106,126,100,0.65)">~1 ม.</div><div class="slabel"></div></div>
+            <div class="pslot" id="sl3" onclick="trgUpload(3)"><div class="si">📷</div><div>ใบและกิ่ง</div><div style="font-size:0.6rem;color:rgba(106,126,100,0.65)">ระยะใกล้</div><div class="slabel"></div></div>
+          </div>
+          <input type="file" id="fInp" accept="image/*" style="display:none" onchange="onFile(event)">
+          <div class="box360">
+            <h5>🔄 บริการเสริม: ถ่ายภาพรอบทิศทาง 360°</h5>
+            <p>เพิ่มความแม่นยำของ AI — ถ่ายรอบต้นไม้ทุก 45° (8 มุม)</p>
+            <label class="cb-row"><input type="checkbox" id="cb360" style="accent-color:var(--blue)"> ฉันต้องการใช้บริการถ่ายภาพ 360° (แนะนำ)</label>
+          </div>
+          <div class="gchip" id="gpschip">📍 กำลังระบุตำแหน่ง...</div>
+        </div>
+        <div class="card" style="margin-bottom:0.9rem">
+          <div class="ct">ข้อมูลเพิ่มเติม</div>
+          <div class="fg"><label>ประเภทสถานที่</label>
+            <select id="loctype"><option>ริมถนนสายหลัก</option><option>ในสวนสาธารณะ</option><option>หน้าอาคารสำนักงาน</option><option>ในมหาวิทยาลัย / โรงเรียน</option><option>ชุมชน / หมู่บ้าน</option></select>
+          </div>
+          <div class="fg"><label>สายพันธุ์ต้นไม้ (ถ้าทราบ)</label>
+            <select id="tspcs"><option>ไม่ทราบ (ให้ AI ประเมิน)</option><option>จามจุรี (Rain Tree)</option><option>สะเดา</option><option>มะขาม</option><option>นนทรี</option><option>ประดู่</option><option>กระพี้เขาควาย</option></select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.45rem">
+            <label class="cb-row"><input type="checkbox" id="cbcrowd" style="accent-color:var(--leaf)"> บริเวณที่มีคนพลุกพลาน</label>
+            <label class="cb-row"><input type="checkbox" id="cbroad" style="accent-color:var(--leaf)"> ต้นไม้ขวางทางถนน</label>
+          </div>
+        </div>
+        <button class="btn btn-p" style="width:100%;justify-content:center;padding:0.82rem;font-size:0.93rem" onclick="runAnalysis()">🤖 ให้ AI วิเคราะห์</button>
+      </div>
+      <div id="res-area">
+        <div class="empty card" id="res-ph"><div class="ei">🤖</div><p>อัปโหลดภาพและกด "ให้ AI วิเคราะห์" เพื่อดูผลลัพธ์</p></div>
+        <div id="res-content" style="display:none" class="result-anim"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="page-map" class="page">
+    <div class="ph">
+      <div><h2>🗺️ แผนที่ความเสี่ยง</h2><p>อำเภอหาดใหญ่ จังหวัดสงขลา (นำร่อง) · OpenStreetMap</p></div>
+      <div class="mbar">
+        <button class="mbtn active" onclick="setMapMode(this,'pin')">📍 ปักหมุด</button>
+        <button class="mbtn" onclick="setMapMode(this,'heatmap')">🔥 Heatmap</button>
+        <button class="mbtn" onclick="setMapMode(this,'monsoon')">🌧️ มรสุม</button>
+      </div>
+    </div>
+    <div class="g3">
+      <div>
+        <div id="leaflet-map"></div>
+        <div style="display:flex;gap:0.8rem;margin-top:0.5rem;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:0.28rem;font-size:0.7rem;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:#333;display:inline-block"></span>วิกฤต</span>
+          <span style="display:flex;align-items:center;gap:0.28rem;font-size:0.7rem;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:var(--high);display:inline-block"></span>เสี่ยงสูง</span>
+          <span style="display:flex;align-items:center;gap:0.28rem;font-size:0.7rem;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:var(--watch);display:inline-block"></span>เฝ้าระวัง</span>
+          <span style="display:flex;align-items:center;gap:0.28rem;font-size:0.7rem;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:var(--safe);display:inline-block"></span>ปลอดภัย</span>
+        </div>
+      </div>
+      <div>
+        <div class="ct" style="margin-bottom:0.7rem">รายการต้นไม้ (<span id="tcnt">0</span> ต้น)</div>
+        <div id="tlist" style="max-height:470px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="page-dash" class="page">
+    <div class="ph"><div><h2>📊 Dashboard Analytics</h2><p>ภาพรวมข้อมูลต้นไม้เมืองหาดใหญ่</p></div>
+      <button class="btn btn-s btn-sm" onclick="exportESG()">📈 Export ESG</button>
+    </div>
+    <div class="g4">
+      <div class="sc"><div class="sn" id="d0">0</div><div class="sl">ต้นไม้ทั้งหมด</div></div>
+      <div class="sc"><div class="sn g" id="d1">0</div><div class="sl">กก. CO₂/ปี</div></div>
+      <div class="sc"><div class="sn a" id="d2">—</div><div class="sl">AI Confidence เฉลี่ย</div></div>
+      <div class="sc"><div class="sn" id="d3">0</div><div class="sl">รายงานทั้งหมด</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:1.1rem">
+      <div class="card"><div class="ct">การกระจายความเสี่ยง</div>
+        <div style="display:flex;align-items:center;gap:1.3rem">
+          <svg width="95" height="95" viewBox="0 0 36 36" id="donut"></svg>
+          <div id="dlegend"></div>
+        </div>
+      </div>
+      <div class="card"><div class="ct">รายงาน 6 สัปดาห์ล่าสุด</div>
+        <div class="cbc" id="wchart"></div><div class="clabels" id="wlabels"></div>
+      </div>
+    </div>
+    <div class="card"><div class="ct">🌿 คาร์บอนรายสายพันธุ์ (กก./ปี)</div><div id="cbreak"></div></div>
+  </div>
+
+  <!-- ENCYCLOPEDIA -->
+  <div id="page-enc" class="page">
+    <div class="ph"><div><h2>📚 สารานุกรมต้นไม้</h2><p>พันธุ์ไม้ในเขตหาดใหญ่และภาคใต้</p></div>
+      <div id="enc-add" style="display:none"><button class="btn btn-p btn-sm" onclick="addTreeModal()">+ เพิ่มพันธุ์ไม้</button></div>
+    </div>
+    <div class="sbar"><input type="text" id="encsrch" placeholder="🔍 ค้นหาต้นไม้..." oninput="renderEnc()"></div>
+    <div class="encg" id="encgrid"></div>
+  </div>
+
+  <!-- COMMUNITY -->
+  <div id="page-comm" class="page">
+    <div class="ph"><div><h2>🏅 Community</h2><p>นักสำรวจต้นไม้เมืองหาดใหญ่</p></div></div>
+    <div class="g2">
+      <div>
+        <div class="card" style="margin-bottom:0.9rem"><div class="ct">🏆 Leaderboard</div><div id="lb-list"><div class="empty"><div class="ei">🏅</div><p>ยังไม่มีข้อมูล</p></div></div></div>
+        <div class="card"><div class="ct">📢 Feed</div><div id="cfeed"><div class="empty"><div class="ei">🌿</div><p>ยังไม่มีกิจกรรม</p></div></div></div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:0.9rem"><div class="ct">Badge ระบบ</div>
+          <div class="bdg-grid">
+            <div class="bdg-item"><div class="bi">🌱</div><div class="bn">นักสำรวจ</div><div class="br">รายงาน 1+ ต้น</div></div>
+            <div class="bdg-item"><div class="bi">🌳</div><div class="bn">รุกขกรมือใหม่</div><div class="br">รายงาน 5+ ต้น</div></div>
+            <div class="bdg-item"><div class="bi">🏅</div><div class="bn">ผู้พิทักษ์ต้นไม้</div><div class="br">รายงาน 10+ ต้น</div></div>
+            <div class="bdg-item"><div class="bi">🌿</div><div class="bn">นักรบคาร์บอน</div><div class="br">CO₂ 1,000+ กก.</div></div>
+          </div>
+        </div>
+        <div class="card"><div class="ct">Badge ของฉัน</div><div id="mybadges" style="display:flex;flex-wrap:wrap;gap:0.45rem;min-height:40px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="page-chat" class="page">
+    <div class="ph"><div><h2>💬 ติดต่อเจ้าหน้าที่</h2><p>แจ้งปัญหา / สอบถาม / รายงานเร่งด่วน · จ–ศ 8:00–17:00 น.</p></div></div>
+    <div class="chat-layout">
+      <div class="chat-list"><div class="chat-lh">ห้องสนทนา</div><div id="chatrooms"></div></div>
+      <div class="chat-win">
+        <div class="chat-wh"><div class="chav">🏛️</div><div><div style="font-weight:700;font-size:0.88rem" id="chatrname">เลือกห้องสนทนา</div><div style="font-size:0.7rem;color:var(--muted)">เจ้าหน้าที่ ARBOR Ai</div></div></div>
+        <div class="chat-msgs" id="chatmsgs"><div class="empty" style="margin:auto"><div class="ei">💬</div><p>เลือกห้องสนทนาเพื่อเริ่ม</p></div></div>
+        <div class="chat-ir"><input class="chat-inp" id="chatinp" placeholder="พิมพ์ข้อความ..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="chat-send" onclick="sendMsg()">ส่ง</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY REPORTS -->
+  <div id="page-myreports" class="page">
+    <div class="ph"><div><h2>📁 รายงานของฉัน</h2><p>ประวัติการวิเคราะห์ต้นไม้ทั้งหมด</p></div>
+      <button class="btn btn-s btn-sm" onclick="exportMyPDF()">📄 Export PDF</button>
+    </div>
+    <div id="myreports"></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="page-admin" class="page">
+    <div class="ph"><div><h2>⚙️ Admin Panel</h2><p>จัดการระบบ ARBOR Ai · หาดใหญ่ สงขลา</p></div></div>
+    <div class="atabs">
+      <div class="atab active" onclick="atab('rpts',this)">📋 รายงาน</div>
+      <div class="atab" onclick="atab('usrs',this)">👥 ผู้ใช้</div>
+      <div class="atab" onclick="atab('stff',this)">🛡️ ผู้ช่วยแอดมิน</div>
+      <div class="atab" onclick="atab('ctts',this)">📞 หน่วยงาน</div>
+      <div class="atab" onclick="atab('achat',this)">💬 ข้อความ</div>
+    </div>
+    <div class="asub active" id="asub-rpts">
+      <div style="display:flex;gap:0.45rem;margin-bottom:0.9rem;flex-wrap:wrap">
+        <button class="btn btn-d btn-sm" onclick="fAdmin('crisis')">⚫ วิกฤต</button>
+        <button class="btn btn-w btn-sm" onclick="fAdmin('high')">🔴 เสี่ยงสูง</button>
+        <button class="btn btn-s btn-sm" onclick="fAdmin('all')">ทั้งหมด</button>
+        <button class="btn btn-s btn-sm" onclick="expAllR()">📄 Export</button>
+      </div>
+      <div class="card" style="overflow-x:auto"><table class="dtable"><thead><tr><th>#</th><th>ต้นไม้ / สถานที่</th><th>ระดับ</th><th>ผู้รายงาน</th><th>วันที่</th><th>สถานะ</th><th>Actions</th></tr></thead><tbody id="arpts"></tbody></table></div>
+    </div>
+    <div class="asub" id="asub-usrs">
+      <div class="card" style="overflow-x:auto"><table class="dtable"><thead><tr><th>#</th><th>ชื่อ-นามสกุล</th><th>อีเมล</th><th>เบอร์โทร</th><th>สังกัด</th><th>รายงาน</th><th>Actions</th></tr></thead><tbody id="ausrs"></tbody></table></div>
+    </div>
+    <div class="asub" id="asub-stff">
+      <div style="margin-bottom:0.9rem"><button class="btn btn-p btn-sm" onclick="addStaffModal()">+ เพิ่มผู้ช่วยแอดมิน</button></div>
+      <div id="stafflist"></div>
+    </div>
+    <div class="asub" id="asub-ctts">
+      <div style="margin-bottom:0.9rem"><button class="btn btn-p btn-sm" onclick="addContactModal()">+ เพิ่มหน่วยงาน</button></div>
+      <div id="contactlist"></div>
+    </div>
+    <div class="asub" id="asub-achat">
+      <div class="chat-layout" style="height:540px">
+        <div class="chat-list"><div class="chat-lh">ข้อความทั้งหมด</div><div id="achatrooms"></div></div>
+        <div class="chat-win">
+          <div class="chat-wh"><div class="chav">?</div><div style="font-weight:700;font-size:0.88rem" id="achatrname">เลือกห้องสนทนา</div></div>
+          <div class="chat-msgs" id="achatmsgs"><div class="empty" style="margin:auto"><div class="ei">💬</div><p>เลือกห้องสนทนา</p></div></div>
+          <div class="chat-ir"><input class="chat-inp" id="achatinp" placeholder="ตอบกลับ..." onkeydown="if(event.key==='Enter')adminSend()"><button class="chat-send" onclick="adminSend()">ส่ง</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+<script>
+// ══════════════════════════════════════════════
+//  ARBOR Ai v2 — Full Application Logic
+// ══════════════════════════════════════════════
+
+// ── LocalStorage DB ──
+const DB = {
+  get: k => { try { return JSON.parse(localStorage.getItem('arbor2_'+k)); } catch(e){ return null; } },
+  set: (k,v) => { localStorage.setItem('arbor2_'+k, JSON.stringify(v)); },
+  del: k => localStorage.removeItem('arbor2_'+k),
+};
+
+// ── State ──
+let CU = null; // current user
+let lmap = null; // leaflet map
+let markers = [];
+let curSlot = 1;
+let imgs = {};
+let curRoom = null;
+let adminRoom = null;
+let gps = { lat:7.0066, lng:100.5018 };
+
+// ── Helper ──
+const qs = s => document.querySelector(s);
+const qsi = id => document.getElementById(id);
+function rl(risk){ return {crisis:'วิกฤต',high:'เสี่ยงสูง',watch:'เฝ้าระวัง',safe:'ปลอดภัย'}[risk]||risk; }
+function ago(ts){
+  const s=Math.floor((Date.now()-new Date(ts))/1000);
+  if(s<60)return'เมื่อกี้';if(s<3600)return Math.floor(s/60)+' นาทีที่แล้ว';
+  if(s<86400)return Math.floor(s/3600)+' ชม.ที่แล้ว';
+  return Math.floor(s/86400)+' วันที่แล้ว';
+}
+function thDate(ts){ return new Date(ts).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}); }
+
+// ── Default Data ──
+function initDB() {
+  if(!DB.get('users'))   DB.set('users',[]);
+  if(!DB.get('reports')) DB.set('reports',[]);
+  if(!DB.get('staff'))   DB.set('staff',[]);
+  if(!DB.get('chats'))   DB.set('chats',{});
+  if(!DB.get('notifs'))  DB.set('notifs',[]);
+  if(!DB.get('contacts')) DB.set('contacts', defContacts());
+  if(!DB.get('trees'))    DB.set('trees', defTrees());
+}
+
+function defContacts() {
+  return [
+    {id:'c1',name:'เทศบาลนครหาดใหญ่',type:'เทศบาล',phone:'074-200-111',email:'hatyai@municipality.go.th',line:'@hatyai_city'},
+    {id:'c2',name:'สนง.ทรัพยากรธรรมชาติ สงขลา',type:'ราชการ',phone:'074-311-555',email:'sonkhla.dnp@go.th',line:'-'},
+    {id:'c3',name:'คณะวิทยาศาสตร์ ม.อ. หาดใหญ่',type:'มหาวิทยาลัย',phone:'074-288-022',email:'science@psu.ac.th',line:'@psu_sci'},
+  ];
+}
+
+function defTrees() {
+  return [
+    {id:'t1',name:'จามจุรี',sci:'Samanea saman',emoji:'🌳',carbon:'142–180',risks:'เชื้อรา,โพรง,มรสุม',tips:'ตรวจโคนต้นทุก 3 เดือน โดยเฉพาะก่อนมรสุม (เม.ย.)',tags:['คาร์บอนสูง','เสี่ยงมรสุม','พบบ่อย'],img:null},
+    {id:'t2',name:'สะเดา',sci:'Azadirachta indica',emoji:'🌿',carbon:'80–110',risks:'ปลวก,รากตื้น',tips:'ฉีดสารกำจัดปลวกรอบโคนต้นปีละครั้ง',tags:['กันแมลง','เสี่ยงปลวก'],img:null},
+    {id:'t3',name:'มะขาม',sci:'Tamarindus indica',emoji:'🍃',carbon:'60–90',risks:'กิ่งเปราะเมื่ออายุมาก',tips:'ตัดแต่งกิ่งขนาดใหญ่ที่ยื่นออก',tags:['ทนแล้ง','รากแก้วลึก'],img:null},
+    {id:'t4',name:'นนทรี',sci:'Peltophorum pterocarpum',emoji:'🌲',carbon:'70–100',risks:'กิ่งเปราะ,ล้มง่ายช่วงลม',tips:'ค้ำยันกิ่งขนาดใหญ่ในฤดูมรสุม',tags:['ดอกสวย','กิ่งเปราะ'],img:null},
+    {id:'t5',name:'ประดู่',sci:'Pterocarpus indicus',emoji:'🌸',carbon:'90–130',risks:'เชื้อราเปลือก',tips:'รักษาความชื้นรอบโคน ไม่ให้ดินแน่นเกิน',tags:['ไม้มงคล','ทนลม'],img:null},
+    {id:'t6',name:'กระพี้เขาควาย',sci:'Millettia leucantha',emoji:'🌴',carbon:'50–80',risks:'น้อย',tips:'ตัดแต่งกิ่งล่างเพื่อระบายอากาศ',tags:['ภาคใต้','ทนน้ำท่วม'],img:null},
+  ];
+}
+
+// ── AUTH ──
+function switchTab(t) {
+  qs('.auth-tab:first-child').classList.toggle('active',t==='login');
+  qs('.auth-tab:last-child').classList.toggle('active',t==='reg');
+  qsi('form-login').classList.toggle('active',t==='login');
+  qsi('form-reg').classList.toggle('active',t==='reg');
+}
+
+function doLogin() {
+  const em=qsi('li-em').value.trim(), pw=qsi('li-pw').value;
+  const err=qsi('lerr'); err.classList.remove('show');
+  if(em==='kkty@arbor.psu' && pw==='1623#&arbor'){
+    CU={id:'admin',name:'Admin ARBOR',email:em,role:'admin',org:'ARBOR Ai PSU'};
+    DB.set('session',CU); startApp(); return;
+  }
+  const users=DB.get('users')||[];
+  const u=users.find(x=>x.email===em && x.pw===btoa(pw));
+  if(!u){err.textContent='❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง';err.classList.add('show');return;}
+  CU={...u}; delete CU.pw; DB.set('session',CU); startApp();
+}
+
+function doReg() {
+  const err=qsi('rerr'); err.classList.remove('show');
+  const fn=qsi('rg-fn').value.trim(), ln=qsi('rg-ln').value.trim();
+  const em=qsi('rg-em').value.trim(), ph=qsi('rg-ph').value.trim();
+  const org=qsi('rg-org').value.trim();
+  const pw=qsi('rg-pw').value, pw2=qsi('rg-pw2').value;
+  const pdpa=qsi('cb-pdpa').checked, terms=qsi('cb-terms').checked;
+  if(!fn||!ln||!em||!ph||!pw){err.textContent='❌ กรุณากรอกข้อมูลที่จำเป็นให้ครบ';err.classList.add('show');return;}
+  if(pw.length<8){err.textContent='❌ รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร';err.classList.add('show');return;}
+  if(pw!==pw2){err.textContent='❌ รหัสผ่านไม่ตรงกัน';err.classList.add('show');return;}
+  if(!pdpa||!terms){err.textContent='❌ กรุณายอมรับเงื่อนไขและ PDPA';err.classList.add('show');return;}
+  const users=DB.get('users')||[];
+  if(users.find(x=>x.email===em)){err.textContent='❌ อีเมลนี้ถูกใช้แล้ว';err.classList.add('show');return;}
+  const nu={id:'u'+Date.now(),name:fn+' '+ln,email:em,phone:ph,org,role:'user',pw:btoa(pw),joined:new Date().toISOString(),reports:0};
+  users.push(nu); DB.set('users',users);
+  CU={...nu}; delete CU.pw; DB.set('session',CU);
+  startApp(); toast('✅ สมัครสมาชิกสำเร็จ ยินดีต้อนรับ '+fn+'!','success');
+}
+
+function doLogout() {
+  DB.del('session'); CU=null; lmap=null; markers=[];
+  qsi('app').style.display='none';
+  qsi('auth-screen').style.display='flex';
+  qsi('li-em').value=''; qsi('li-pw').value='';
+}
+
+// ── START APP ──
+function startApp() {
+  qsi('auth-screen').style.display='none';
+  qsi('app').style.display='block';
+  qsi('sb-un').textContent=CU.name;
+  qsi('sb-av').textContent=CU.name.charAt(0).toUpperCase();
+  qsi('sb-ur').textContent=CU.role==='admin'?'👑 Administrator':CU.role==='staff'?'🛡️ Staff':'🌿 สมาชิก';
+  qsi('hw').textContent='สวัสดี, '+CU.name.split(' ')[0]+' · ถ่ายภาพ. วิเคราะห์. รู้ก่อนล้ม · หาดใหญ่';
+  const isAdm=CU.role==='admin'||CU.role==='staff';
+  qsi('adm-sec').style.display=isAdm?'':'none';
+  qsi('adm-btn').style.display=isAdm?'':'none';
+  qsi('enc-add').style.display=CU.role==='admin'?'':'none';
+  initGPS(); refreshAll(); initMap(); renderEnc(); renderContacts(); renderStaff();
+  go('home',qs('[onclick*=home]'));
+}
+
+function refreshAll(){
+  updStats(); renderFeed(); renderLB(); renderMyR(); renderAdmR(); renderAdmU(); updNotifDot();
+}
+
+// ── GPS ──
+function initGPS() {
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(p=>{
+      gps={lat:p.coords.latitude,lng:p.coords.longitude};
+      qsi('gpschip').textContent='📍 '+gps.lat.toFixed(4)+'° N, '+gps.lng.toFixed(4)+'° E';
+    },()=>{qsi('gpschip').textContent='📍 7.0066° N, 100.5018° E (หาดใหญ่)';});
+  } else { qsi('gpschip').textContent='📍 7.0066° N, 100.5018° E (หาดใหญ่)'; }
+}
+
+// ── STATS ──
+function updStats(){
+  const rs=DB.get('reports')||[];
+  const tot=rs.length, cr=rs.filter(r=>r.risk==='crisis').length;
+  const hi=rs.filter(r=>r.risk==='high').length, dn=rs.filter(r=>r.status==='done').length;
+  const co=rs.reduce((s,r)=>s+(parseFloat(r.carbon)||0),0);
+  ['st0','st1','st2','st3'].forEach((id,i)=>{const el=qsi(id);if(el)el.textContent=[tot,cr,hi,dn][i];});
+  const hc=qsi('hcarbon');if(hc)hc.textContent=co.toFixed(0);
+  const cb=qsi('cbadge');
+  if(cr>0){cb.style.display='flex';qsi('cbtext').textContent='วิกฤต '+cr+' ต้น';}else cb.style.display='none';
+  // dash stats
+  ['d0','d3'].forEach(id=>{const el=qsi(id);if(el)el.textContent=tot;});
+  const d1=qsi('d1');if(d1)d1.textContent=co.toFixed(0);
+  if(tot>0){const acc=Math.round(rs.reduce((s,r)=>s+(r.conf||75),0)/tot);const d2=qsi('d2');if(d2)d2.textContent=acc+'%';}
+  renderDonut(rs); renderWeekly(rs); renderCarbon(rs); renderMapMkrs(rs);
+}
+
+// ── FEED ──
+function renderFeed(){
+  const rs=(DB.get('reports')||[]).slice(-5).reverse();
+  const html=rs.length?rs.map(r=>`<div class="fi"><div class="fd ${r.risk}"></div><div class="ft"><strong>${rl(r.risk)}</strong> · ${r.species||'ต้นไม้'} · ${r.location||''}</div><div class="ftm">${ago(r.at)}</div></div>`).join(''):'<div class="empty"><div class="ei">🌿</div><p>ยังไม่มีกิจกรรม</p></div>';
+  ['hfeed','cfeed'].forEach(id=>{const el=qsi(id);if(el)el.innerHTML=html;});
+}
+
+// ── LEADERBOARD ──
+function renderLB(){
+  const users=(DB.get('users')||[]).filter(u=>u.reports>0).sort((a,b)=>b.reports-a.reports).slice(0,5);
+  const rks=['🥇','🥈','🥉','4','5'];
+  const html=users.length?users.map((u,i)=>`<div class="lbr"><div class="lbrank ${i<3?['g','s','b'][i]:''}">${rks[i]}</div><div style="flex:1">${u.name}</div><div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--leaf);font-weight:700">${u.reports} ต้น</div></div>`).join(''):'<div class="empty"><div class="ei">🏅</div><p>ยังไม่มีข้อมูล</p></div>';
+  ['hlb','lb-list'].forEach(id=>{const el=qsi(id);if(el)el.innerHTML=html;});
+  // my badges
+  const mb=qsi('mybadges');
+  if(mb && CU){
+    const r=CU.reports||0;const c=CU.carbon||0;
+    const bs=[];
+    if(r>=1)bs.push('🌱 นักสำรวจ');if(r>=5)bs.push('🌳 รุกขกรมือใหม่');
+    if(r>=10)bs.push('🏅 ผู้พิทักษ์ต้นไม้');if(c>=1000)bs.push('🌿 นักรบคาร์บอน');
+    mb.innerHTML=bs.length?bs.map(b=>`<span style="background:rgba(74,140,63,0.1);color:var(--leaf);padding:0.28rem 0.75rem;border-radius:20px;font-size:0.78rem;font-weight:600">${b}</span>`).join(''):'<span style="font-size:0.82rem;color:var(--muted)">ยังไม่มี Badge · เริ่มรายงานต้นไม้แรกของคุณ!</span>';
+  }
+}
+
+// ── ANALYZE ──
+function trgUpload(n){ curSlot=n; qsi('fInp').click(); }
+
+function onFile(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    imgs[curSlot]=ev.target.result;
+    const sl=qsi('sl'+curSlot);
+    sl.innerHTML=`<img src="${ev.target.result}" alt="photo">`;
+    sl.classList.add('filled');
+    toast('✅ อัปโหลดภาพที่ '+curSlot+' สำเร็จ','success');
+  };
+  r.readAsDataURL(f); e.target.value='';
+}
+
+const SCENARIOS=[
+  {risk:'crisis',conf_range:[82,95],symptoms:[['โพรงขนาดใหญ่ที่โคนต้น',95],['รากล้มจากดินทรุด',88],['เชื้อราทั่วลำต้น',91]],recs:['ปิดกั้นบริเวณรอบต้นไม้ทันที เพื่อความปลอดภัย','แจ้งเทศบาลดำเนินการโดยด่วน','ห้ามจอดรถหรือสัญจรใต้ต้นไม้'],carbon:185,urgDays:0},
+  {risk:'high',conf_range:[75,88],symptoms:[['พบเชื้อราที่โคนต้น',87],['กิ่งแห้งขนาดใหญ่',71],['รอยแตกลึกที่ลำต้น',64]],recs:['ฉีดสารป้องกันเชื้อราภายใน 3 วัน','ตัดแต่งกิ่งแห้งออกทันที','ให้ผู้เชี่ยวชาญตรวจสอบภายใน 7 วัน'],carbon:145,urgDays:7},
+  {risk:'watch',conf_range:[68,82],symptoms:[['ใบเหลืองผิดฤดู',62],['รอยแตกที่เปลือก',45],['ดินยุบรอบโคนต้น',38]],recs:['ฉีดสารป้องกันเชื้อราภายใน 14 วัน','ตัดแต่งกิ่งที่มีอาการ','ถ่ายภาพติดตามทุก 2 สัปดาห์'],carbon:98,urgDays:14},
+  {risk:'safe',conf_range:[85,95],symptoms:[['สีใบปกติ สมบูรณ์',95],['เปลือกแน่น ไม่มีรอยแตก',91],['โคนต้นแข็งแรง ดินไม่ยุบ',88]],recs:['ตรวจสอบตามปกติทุก 3 เดือน','รดน้ำและใส่ปุ๋ยตามฤดูกาล'],carbon:110,urgDays:90},
+];
+
+function runAnalysis(){
+  if(!imgs[1]&&!imgs[2]&&!imgs[3]){toast('⚠️ กรุณาอัปโหลดภาพอย่างน้อย 1 ภาพ','error');return;}
+  const is360=qsi('cb360').checked;
+  showProg(is360?'🔄 กำลังประมวลผลภาพ 360° + AI วิเคราะห์...':'🤖 AI กำลังวิเคราะห์ภาพต้นไม้...');
+  const delay=2200+(is360?1100:0);
+  setTimeout(()=>{
+    hideProg();
+    const w=is360?[0.06,0.2,0.42,0.32]:[0.12,0.28,0.38,0.22];
+    const rnd=Math.random(); let sc;
+    if(rnd<w[0])sc=SCENARIOS[0]; else if(rnd<w[0]+w[1])sc=SCENARIOS[1]; else if(rnd<w[0]+w[1]+w[2])sc=SCENARIOS[2]; else sc=SCENARIOS[3];
+    const species=qsi('tspcs').value.replace('ไม่ทราบ (ให้ AI ประเมิน)','จามจุรี (AI ประเมิน)');
+    const loc=qsi('loctype').value;
+    const conf=sc.conf_range[0]+Math.floor(Math.random()*(sc.conf_range[1]-sc.conf_range[0]))+(is360?4:0);
+    const mon=new Date().getMonth()>=4&&new Date().getMonth()<=9;
+    const contacts=DB.get('contacts')||[];
+    const rpt={
+      id:'r'+Date.now(),uid:CU.id,uname:CU.name,species,location:loc,
+      lat:gps.lat+(Math.random()-0.5)*0.02, lng:gps.lng+(Math.random()-0.5)*0.02,
+      risk:sc.risk,symptoms:sc.symptoms,recs:sc.recs,
+      conf,carbon:sc.carbon,urgDays:sc.urgDays,mon:mon?'สูง':'ต่ำ',
+      status:sc.risk==='crisis'?'alert':'pending',at:new Date().toISOString(),is360,
+      img1:imgs[1]||null,
+    };
+    const rpts=DB.get('reports')||[]; rpts.push(rpt); DB.set('reports',rpts);
+    // update user reports count
+    const users=DB.get('users')||[]; const ui=users.findIndex(u=>u.id===CU.id);
+    if(ui>=0){
+      users[ui].reports=(users[ui].reports||0)+1;
+      users[ui].carbon=(users[ui].carbon||0)+sc.carbon;
+      DB.set('users',users);
+      CU.reports=(CU.reports||0)+1; CU.carbon=(CU.carbon||0)+sc.carbon;
+      DB.set('session',CU);
+    }
+    addNotif('📋 วิเคราะห์ '+species+' — '+rl(sc.risk), sc.urgDays===0?'ต้องดำเนินการทันที!':'ดูผลในรายงานของฉัน');
+    // Render result
+    qsi('res-ph').style.display='none';
+    qsi('res-content').style.display='block';
+    qsi('res-content').innerHTML=buildResult(rpt,contacts);
+    imgs={}; [1,2,3].forEach(n=>{const s=qsi('sl'+n);s.innerHTML=`<div class="si">📷</div><div>${['ภาพรวมทั้งต้น','โคนต้น+ลำต้น','ใบและกิ่ง'][n-1]}</div>`;s.classList.remove('filled');});
+    refreshAll();
+    toast('🤖 วิเคราะห์เสร็จสิ้น · ระดับ: '+rl(sc.risk),sc.risk==='crisis'?'error':'warning');
+    if(sc.risk==='crisis')setTimeout(()=>toast('🔔 ส่ง Telegram Alert ถึงเทศบาลแล้ว!','warning'),800);
+  }, delay);
+}
+
+function buildResult(r,contacts){
+  const dmg=r.risk==='crisis'||r.risk==='high';
+  const spots=dmg?`<div class="t3spot" style="width:18px;height:13px;left:52px;top:115px"></div><div class="t3spot" style="width:12px;height:10px;left:42px;top:95px"></div>`:'';
+  const tree3d=`<div class="tree3d-wrap"><h4>🌳 โมเดล 3D ต้นไม้ (จำลองจากผลวิเคราะห์)</h4>
+    <div style="display:flex;justify-content:center"><div class="tree3d">
+      <div class="t3trunk ${dmg?'dmg':'ok'}"></div>
+      <div class="t3c ${dmg?'dmg':'ok'}1"></div><div class="t3c ${dmg?'dmg':'ok'}2"></div><div class="t3c ${dmg?'dmg':'ok'}3"></div>
+      ${spots}<div class="t3shadow"></div>
+    </div></div>
+    <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:0.45rem">ใบ: ${dmg?'🟡 ผิดปกติ':'🟢 ปกติ'} · ลำต้น: ${dmg?'⚠️ มีความเสียหาย':'✅ แข็งแรง'}</div></div>`;
+  const sympH=r.symptoms.map(([s,c])=>`<div class="crow"><span>${s}</span><div style="display:flex;align-items:center;gap:0.45rem"><div class="cbar"><div class="cf ${c>80?'r':c>60?'y':'g'}" style="width:${c}%"></div></div><span style="font-family:'Space Mono',monospace;font-size:0.68rem">${c}%</span></div></div>`).join('');
+  const recH=r.recs.map((rc,i)=>`<div class="ri"><div class="rn">${i+1}</div><span>${rc}</span></div>`).join('');
+  const contH=contacts.length?`<div class="ccard"><h5>📞 หน่วยงานที่เกี่ยวข้อง</h5>${contacts.map(c=>`<div class="ci"><span class="cil">${c.name}</span><span>📞 ${c.phone} · ✉️ ${c.email}</span></div>`).join('')}</div>`:'';
+  const ri=r.img1?`<img src="${r.img1}" style="width:100%;height:155px;object-fit:cover;border-radius:7px;margin-bottom:0.9rem" alt="ภาพต้นไม้">`:'';
+  return `<div class="card result-anim">
+    <div class="ct">📋 ใบรายงานผล — ${r.species}</div>
+    <div class="rbadge ${r.risk}"><div class="rbi">${{crisis:'⚫',high:'🔴',watch:'🟡',safe:'🟢'}[r.risk]}</div><div><div class="rbl">${rl(r.risk)}</div><div class="rbd">${r.urgDays===0?'⚡ ต้องดำเนินการทันที!':'ดำเนินการภายใน '+r.urgDays+' วัน'}</div></div></div>
+    ${tree3d}${ri}
+    <div style="margin-bottom:0.9rem"><div class="ct" style="font-size:0.58rem;margin-bottom:0.5rem">อาการที่พบ</div>${sympH}</div>
+    <div style="margin-bottom:0.9rem"><div class="ct" style="font-size:0.58rem;margin-bottom:0.5rem">คำแนะนำ</div>${recH}</div>
+    <div style="display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.75rem">
+      <span style="background:#f5f0e8;padding:0.28rem 0.65rem;border-radius:4px;font-size:0.76rem">🌿 CO₂: ${r.carbon} กก./ปี</span>
+      <span style="background:#f5f0e8;padding:0.28rem 0.65rem;border-radius:4px;font-size:0.76rem">🎯 AI: ${r.conf}%</span>
+      <span style="background:#f5f0e8;padding:0.28rem 0.65rem;border-radius:4px;font-size:0.76rem">🌧️ มรสุม: ${r.mon}</span>
+      ${r.is360?'<span style="background:rgba(21,101,192,0.09);color:var(--blue);padding:0.28rem 0.65rem;border-radius:4px;font-size:0.76rem">🔄 360° Mode</span>':''}
+    </div>
+    <p style="font-size:0.7rem;color:var(--muted);border-top:1px solid var(--border);padding-top:0.65rem;margin-bottom:0.75rem">⚠️ ผลวิเคราะห์นี้เป็นการประมาณการจาก AI ควรให้ผู้เชี่ยวชาญยืนยันก่อนดำเนินการ</p>
+    ${contH}
+    <div style="display:flex;gap:0.55rem;flex-wrap:wrap;margin-top:0.8rem">
+      <button class="btn btn-p btn-sm" onclick="expPDF('${r.id}')">📄 Export PDF</button>
+      ${r.risk==='crisis'||r.risk==='high'?`<button class="btn btn-d btn-sm" onclick="toast('🔔 ส่ง Telegram Alert ถึงเทศบาลแล้ว!','warning')">🔔 แจ้งเทศบาล</button>`:''}
+    </div>
+  </div>`;
+}
+
+// ── MAP ──
+const rcols={crisis:'#222',high:'#b71c1c',watch:'#e65100',safe:'#2e7d32'};
+function initMap(){
+  if(lmap) return;
+  lmap=L.map('leaflet-map').setView([7.0066,100.5018],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:18
+  }).addTo(lmap);
+  renderMapMkrs(DB.get('reports')||[]);
+}
+
+function renderMapMkrs(rpts){
+  if(!lmap) return;
+  markers.forEach(m=>lmap.removeLayer(m)); markers=[];
+  rpts.forEach(r=>{
+    const icon=L.divIcon({html:`<div style="width:20px;height:20px;border-radius:50%;background:${rcols[r.risk]||'#888'};border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`,className:'',iconSize:[20,20],iconAnchor:[10,10]});
+    const m=L.marker([r.lat||7.0066,r.lng||100.5018],{icon}).addTo(lmap);
+    m.bindPopup(`<div style="font-family:'Sarabun',sans-serif"><strong>${r.species}</strong><br><span style="color:${rcols[r.risk]};font-weight:600">${rl(r.risk)}</span><br>${r.location}<br><small>${thDate(r.at)}</small></div>`);
+    markers.push(m);
+  });
+  const tc=qsi('tcnt'); if(tc) tc.textContent=rpts.length;
+  const tl=qsi('tlist');
+  if(tl) tl.innerHTML=rpts.length?rpts.slice().reverse().map(r=>`
+    <div class="tli" onclick="lmap.flyTo([${r.lat||7.0066},${r.lng||100.5018}],16)">
+      <div class="tld ${r.risk}"></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:0.83rem">${r.species}</div><div style="font-size:0.7rem;color:var(--muted)">📍 ${r.location}</div></div>
+      <span class="rt ${r.risk}">${rl(r.risk)}</span>
+    </div>`).join('') : '<div class="empty" style="padding:1.5rem"><div class="ei">🗺️</div><p>ยังไม่มีข้อมูล</p></div>';
+}
+
+function setMapMode(btn,mode){
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  if(!lmap)return;
+  if(mode==='heatmap')toast('🔥 Heatmap: แสดงความหนาแน่นความเสี่ยงในพื้นที่');
+  else if(mode==='monsoon')toast('🌧️ โหมดมรสุม: Highlight ต้นไม้เสี่ยงเพิ่มช่วงพ.ค.–ต.ค.');
+}
+
+// ── DASHBOARD ──
+function renderDonut(rs){
+  const cnt={crisis:0,high:0,watch:0,safe:0};
+  rs.forEach(r=>cnt[r.risk]=(cnt[r.risk]||0)+1);
+  const tot=rs.length||1;
+  const items=[{k:'crisis',l:'วิกฤต',c:'#333'},{k:'high',l:'เสี่ยงสูง',c:'var(--high)'},{k:'watch',l:'เฝ้าระวัง',c:'var(--watch)'},{k:'safe',l:'ปลอดภัย',c:'var(--safe)'}];
+  const sv=qsi('donut'); if(!sv) return;
+  let off=25, svg=`<circle cx="18" cy="18" r="15.9" fill="none" stroke="#eee" stroke-width="3.2"/>`;
+  items.forEach(it=>{const p=(cnt[it.k]||0)/tot*100;svg+=`<circle cx="18" cy="18" r="15.9" fill="none" stroke="${it.c}" stroke-width="3.2" stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${off}"/>`;off-=p;});
+  sv.innerHTML=svg;
+  const lg=qsi('dlegend'); if(lg) lg.innerHTML=items.map(it=>`<div class="dl-item"><div class="dldot" style="background:${it.c}"></div>${it.l}: ${cnt[it.k]||0} ต้น</div>`).join('');
+}
+
+function renderWeekly(rs){
+  const wc=qsi('wchart'), wl=qsi('wlabels'); if(!wc||!wl) return;
+  wc.innerHTML=''; wl.innerHTML='';
+  const weeks=[]; const now=new Date();
+  for(let i=5;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i*7);weeks.push({l:'W'+(6-i),s:new Date(d-7*86400000),e:d});}
+  const maxV=Math.max(1,...weeks.map(w=>rs.filter(r=>new Date(r.at)>=w.s&&new Date(r.at)<w.e).length));
+  weeks.forEach(w=>{
+    const v=rs.filter(r=>new Date(r.at)>=w.s&&new Date(r.at)<w.e).length;
+    const b=document.createElement('div'); b.className='cb';
+    b.style.cssText=`height:${Math.max(4,(v/maxV)*100)}%;background:var(--leaf);`;
+    b.dataset.tip=v+' ต้น'; wc.appendChild(b);
+    const lbl=document.createElement('span'); lbl.textContent=w.l; wl.appendChild(lbl);
+  });
+}
+
+function renderCarbon(rs){
+  const el=qsi('cbreak'); if(!el) return;
+  const sp={};rs.forEach(r=>sp[r.species]=(sp[r.species]||0)+(parseFloat(r.carbon)||0));
+  const sorted=Object.entries(sp).sort((a,b)=>b[1]-a[1]);
+  const maxC=sorted[0]?.[1]||1;
+  el.innerHTML=sorted.length?sorted.map(([k,v])=>`<div class="drow"><div class="dlabel" title="${k}">${k.length>12?k.slice(0,12)+'…':k}</div><div class="dbw"><div class="dbar" style="width:${v/maxC*100}%"></div></div><div class="dval">${v.toFixed(0)}</div></div>`).join('') : '<div class="empty"><div class="ei">🌿</div><p>ยังไม่มีข้อมูล</p></div>';
+}
+
+// ── ENCYCLOPEDIA ──
+function renderEnc(){
+  const trees=DB.get('trees')||[];
+  const srch=(qsi('encsrch')?.value||'').toLowerCase();
+  const filtered=trees.filter(t=>!srch||t.name.toLowerCase().includes(srch)||t.sci.toLowerCase().includes(srch));
+  const isAdm=CU?.role==='admin';
+  const g=qsi('encgrid'); if(!g) return;
+  g.innerHTML=filtered.map(t=>`
+    <div class="encc" onclick="showTree('${t.id}')">
+      <div class="eci">${t.img?`<img src="${t.img}" alt="${t.name}">`:`<div class="ecemoji">${t.emoji}</div>`}
+        ${isAdm?`<button onclick="event.stopPropagation();delTree('${t.id}')" style="position:absolute;top:4px;right:4px;background:rgba(183,28,28,0.8);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:0.68rem;cursor:pointer;z-index:2">🗑</button>`:''}
+      </div>
+      <div class="ecb"><div class="ecname">${t.name}</div><div class="ecsci">${t.sci}</div>
+        <div class="ectags">${(t.tags||[]).map(tag=>`<span class="ectag">${tag}</span>`).join('')}</div>
+      </div>
+    </div>`).join('')+(isAdm?`<div class="addbtn" onclick="addTreeModal()"><span style="font-size:1.8rem">+</span><span>เพิ่มพันธุ์ไม้</span></div>`:'');
+}
+
+function showTree(id){
+  const t=(DB.get('trees')||[]).find(x=>x.id===id); if(!t) return;
+  const isAdm=CU?.role==='admin';
+  showModal('🌳 '+t.name,`
+    <div style="font-style:italic;color:var(--muted);margin-bottom:0.9rem;font-size:0.83rem">${t.sci}</div>
+    ${t.img?`<img src="${t.img}" style="width:100%;height:170px;object-fit:cover;border-radius:7px;margin-bottom:0.9rem">`:''}
+    <div style="display:grid;gap:0.55rem;font-size:0.84rem">
+      <div style="padding:0.65rem;background:#f5f0e8;border-radius:6px"><strong>🌿 คาร์บอน:</strong> ${t.carbon} กก. CO₂/ปี</div>
+      <div style="padding:0.65rem;background:rgba(183,28,28,0.04);border-radius:6px"><strong>⚠ ความเสี่ยง:</strong> ${t.risks}</div>
+      <div style="padding:0.65rem;background:rgba(74,140,63,0.05);border-radius:6px"><strong>💡 เคล็ดลับ:</strong> ${t.tips}</div>
+    </div>
+    ${isAdm?`<div style="margin-top:1rem"><label style="display:block;font-size:0.78rem;font-weight:600;margin-bottom:0.38rem;color:var(--forest)">📷 อัปโหลดภาพจริง</label><input type="file" accept="image/*" onchange="upTreeImg('${t.id}',this)" style="font-size:0.8rem;width:100%"></div>`:''}
+  `,[]);
+}
+
+function upTreeImg(id,inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=ev=>{
+    const trees=DB.get('trees')||[]; const i=trees.findIndex(t=>t.id===id);
+    if(i>=0){trees[i].img=ev.target.result;DB.set('trees',trees);}
+    closeModal(); renderEnc(); toast('✅ อัปโหลดรูปต้นไม้สำเร็จ','success');
+  }; r.readAsDataURL(f);
+}
+
+function addTreeModal(){
+  showModal('+ เพิ่มพันธุ์ไม้ใหม่',`
+    <div class="fg"><label>ชื่อภาษาไทย *</label><input id="nt-n" type="text"></div>
+    <div class="fg"><label>ชื่อวิทยาศาสตร์</label><input id="nt-s" type="text"></div>
+    <div class="fg"><label>Emoji</label><input id="nt-e" type="text" value="🌿" style="width:55px"></div>
+    <div class="fg"><label>คาร์บอน (กก./ปี)</label><input id="nt-c" type="text" placeholder="เช่น 80–120"></div>
+    <div class="fg"><label>ความเสี่ยงหลัก</label><input id="nt-r" type="text" placeholder="คั่นด้วยจุลภาค"></div>
+    <div class="fg"><label>เคล็ดลับดูแล</label><input id="nt-t" type="text"></div>
+    <div class="fg"><label>Tags</label><input id="nt-g" type="text" placeholder="คั่นด้วยจุลภาค"></div>
+    <div class="fg"><label>รูปภาพ (ไม่บังคับ)</label><input id="nt-i" type="file" accept="image/*"></div>
+  `,[{l:'เพิ่มพันธุ์ไม้',c:'btn-p',fn:'saveTree()'}]);
+}
+
+function saveTree(){
+  const name=qsi('nt-n')?.value.trim(); if(!name){toast('กรุณากรอกชื่อ','error');return;}
+  const inp=qsi('nt-i'); const f=inp?.files[0];
+  const save=img=>{
+    const trees=DB.get('trees')||[];
+    trees.push({id:'t'+Date.now(),name,sci:qsi('nt-s').value,emoji:qsi('nt-e').value||'🌿',carbon:qsi('nt-c').value,risks:qsi('nt-r').value,tips:qsi('nt-t').value,tags:(qsi('nt-g').value||'').split(',').map(s=>s.trim()).filter(Boolean),img:img||null});
+    DB.set('trees',trees); closeModal(); renderEnc(); toast('✅ เพิ่มพันธุ์ไม้ "'+name+'" สำเร็จ','success');
+  };
+  if(f){const r=new FileReader();r.onload=ev=>save(ev.target.result);r.readAsDataURL(f);}else save(null);
+}
+
+function delTree(id){
+  if(!confirm('ลบพันธุ์ไม้นี้?'))return;
+  DB.set('trees',(DB.get('trees')||[]).filter(t=>t.id!==id)); renderEnc(); toast('🗑 ลบพันธุ์ไม้แล้ว');
+}
+
+// ── CONTACTS ──
+function renderContacts(){
+  const cs=DB.get('contacts')||[];
+  const el=qsi('contactlist'); if(!el) return;
+  el.innerHTML=cs.length?cs.map(c=>`
+    <div class="agc">
+      <div class="agci">🏛️</div>
+      <div class="agcin"><div class="agcn">${c.name}</div><div class="agcd">📞 ${c.phone} · ✉️ ${c.email} · LINE: ${c.line} · ${c.type}</div></div>
+      <div style="display:flex;gap:0.38rem">
+        <button class="btn btn-s btn-xs" onclick="editCModal('${c.id}')">✏️</button>
+        <button class="btn btn-d btn-xs" onclick="delContact('${c.id}')">🗑</button>
+      </div>
+    </div>`).join('') : '<div class="empty"><p>ยังไม่มีหน่วยงาน</p></div>';
+}
+
+function addContactModal(id){
+  const cs=DB.get('contacts')||[]; const c=id?cs.find(x=>x.id===id):{};
+  showModal((id?'✏️ แก้ไข':'+ เพิ่ม')+' หน่วยงาน',`
+    <div class="fg"><label>ชื่อหน่วยงาน *</label><input id="nc-n" value="${c.name||''}"></div>
+    <div class="fg"><label>ประเภท</label><select id="nc-t"><option ${c.type==='เทศบาล'?'selected':''}>เทศบาล</option><option ${c.type==='ราชการ'?'selected':''}>ราชการ</option><option ${c.type==='มหาวิทยาลัย'?'selected':''}>มหาวิทยาลัย</option><option>โรงพยาบาล</option><option>อื่นๆ</option></select></div>
+    <div class="fg"><label>เบอร์โทร</label><input id="nc-p" value="${c.phone||''}"></div>
+    <div class="fg"><label>อีเมล</label><input id="nc-e" value="${c.email||''}"></div>
+    <div class="fg"><label>LINE ID / OA</label><input id="nc-l" value="${c.line||''}"></div>
+  `,[{l:'บันทึก',c:'btn-p',fn:`saveContact('${id||''}')`}]);
+}
+
+function editCModal(id){addContactModal(id);}
+
+function saveContact(id){
+  const name=qsi('nc-n').value.trim(); if(!name){toast('กรุณากรอกชื่อ','error');return;}
+  const cs=DB.get('contacts')||[];
+  const obj={id:id||'c'+Date.now(),name,type:qsi('nc-t').value,phone:qsi('nc-p').value,email:qsi('nc-e').value,line:qsi('nc-l').value};
+  if(id){const i=cs.findIndex(c=>c.id===id);if(i>=0)cs[i]=obj;else cs.push(obj);}else cs.push(obj);
+  DB.set('contacts',cs); closeModal(); renderContacts(); toast('✅ บันทึกหน่วยงานแล้ว','success');
+}
+
+function delContact(id){
+  if(!confirm('ลบหน่วยงานนี้?'))return;
+  DB.set('contacts',(DB.get('contacts')||[]).filter(c=>c.id!==id)); renderContacts(); toast('🗑 ลบหน่วยงานแล้ว');
+}
+
+// ── STAFF ──
+function renderStaff(){
+  const st=DB.get('staff')||[];
+  const el=qsi('stafflist'); if(!el) return;
+  el.innerHTML=st.length?st.map(s=>`
+    <div class="staff-c">
+      <div class="staff-av">${s.name.charAt(0)}</div>
+      <div class="staff-info"><div class="staff-name">${s.name}</div><div class="staff-email">${s.email}</div></div>
+      <span class="staff-role">ผู้ช่วยแอดมิน</span>
+      <button class="btn btn-d btn-xs" onclick="delStaff('${s.id}')">ลบ</button>
+    </div>`).join('') : '<div class="empty"><p>ยังไม่มีผู้ช่วยแอดมิน</p></div>';
+}
+
+function addStaffModal(){
+  showModal('🛡️ เพิ่มผู้ช่วยแอดมิน',`
+    <div class="fg"><label>อีเมลผู้ใช้ในระบบ</label><input id="se" type="email" placeholder="email ที่ลงทะเบียนแล้ว"></div>
+    <p style="font-size:0.76rem;color:var(--muted)">ผู้ช่วยแอดมินสามารถดู/จัดการรายงาน ตอบข้อความ แต่ไม่สามารถลบสมาชิกหรือเปลี่ยนแปลงระบบหลักได้</p>
+  `,[{l:'เพิ่ม',c:'btn-p',fn:'addStaff()'}]);
+}
+
+function addStaff(){
+  const em=qsi('se')?.value.trim(); if(!em) return;
+  const users=DB.get('users')||[]; const u=users.find(x=>x.email===em);
+  if(!u){toast('❌ ไม่พบผู้ใช้นี้ในระบบ','error');return;}
+  const st=DB.get('staff')||[];
+  if(st.find(s=>s.id===u.id)){toast('ผู้ใช้นี้เป็นผู้ช่วยแล้ว','warning');return;}
+  st.push({id:u.id,name:u.name,email:u.email});DB.set('staff',st);
+  const i=users.findIndex(x=>x.id===u.id);users[i].role='staff';DB.set('users',users);
+  closeModal();renderStaff();toast('✅ เพิ่มผู้ช่วยแอดมิน '+u.name+' แล้ว','success');
+}
+
+function delStaff(id){
+  if(!confirm('ลบผู้ช่วยแอดมินนี้?'))return;
+  DB.set('staff',(DB.get('staff')||[]).filter(s=>s.id!==id));
+  const users=DB.get('users')||[];const i=users.findIndex(u=>u.id===id);
+  if(i>=0){users[i].role='user';DB.set('users',users);}
+  renderStaff();toast('🗑 ลบผู้ช่วยแอดมินแล้ว');
+}
+
+// ── ADMIN REPORTS ──
+function renderAdmR(filter){
+  const el=qsi('arpts'); if(!el) return;
+  let rs=DB.get('reports')||[];
+  if(filter&&filter!=='all')rs=rs.filter(r=>r.risk===filter);
+  rs=rs.slice().reverse();
+  el.innerHTML=rs.length?rs.map((r,i)=>`<tr>
+    <td style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted)">#${String(i+1).padStart(3,'0')}</td>
+    <td><div style="font-weight:600">${r.species}</div><div style="font-size:0.7rem;color:var(--muted)">📍 ${r.location}</div></td>
+    <td><span class="rt ${r.risk}">${rl(r.risk)}</span></td>
+    <td style="font-size:0.8rem">${r.uname||'ไม่ระบุ'}</td>
+    <td style="font-size:0.76rem;color:var(--muted)">${thDate(r.at)}</td>
+    <td><span class="sp ${r.status}">${{pending:'⏳ รอ',progress:'🔧 ดำเนินการ',done:'✅ เสร็จ',alert:'🚨 แจ้งแล้ว'}[r.status]||r.status}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-s btn-xs" style="margin-right:3px" onclick="updR('${r.id}','progress')">รับเรื่อง</button>
+      <button class="btn btn-s btn-xs" style="margin-right:3px" onclick="updR('${r.id}','done')">เสร็จสิ้น</button>
+      <button class="btn btn-d btn-xs" onclick="delR('${r.id}')">🗑</button>
+    </td>
+  </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">ยังไม่มีรายงาน</td></tr>';
+}
+
+function updR(id,st){
+  const rs=DB.get('reports')||[]; const i=rs.findIndex(r=>r.id===id); if(i<0)return;
+  rs[i].status=st;DB.set('reports',rs);renderAdmR();toast('✅ อัปเดตสถานะแล้ว','success');
+}
+function delR(id){
+  if(!confirm('ลบรายงานนี้?'))return;
+  DB.set('reports',(DB.get('reports')||[]).filter(r=>r.id!==id));refreshAll();toast('🗑 ลบรายงานแล้ว');
+}
+function fAdmin(f){renderAdmR(f==='all'?null:f);}
+function expAllR(){toast('📄 Export รายงานทั้งหมดสำเร็จ');}
+function expPDF(){toast('📄 Export PDF สำเร็จ');}
+function exportESG(){toast('📈 Export ESG Carbon Report สำเร็จ','success');}
+function expMyPDF(){toast('📄 Export รายงานของฉันสำเร็จ');}
+
+// ── ADMIN USERS ──
+function renderAdmU(){
+  const el=qsi('ausrs'); if(!el) return;
+  const users=DB.get('users')||[];
+  const rs=DB.get('reports')||[];
+  el.innerHTML=users.length?users.map((u,i)=>`<tr>
+    <td style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted)">#${i+1}</td>
+    <td style="font-weight:600">${u.name}</td>
+    <td>${u.email}</td>
+    <td>${u.phone||'-'}</td>
+    <td>${u.org||'-'}</td>
+    <td style="font-family:'Space Mono',monospace">${rs.filter(r=>r.uid===u.id).length}</td>
+    <td><button class="btn btn-d btn-xs" onclick="delUser('${u.id}')">🗑 ลบ</button></td>
+  </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">ยังไม่มีผู้ใช้</td></tr>';
+}
+
+function delUser(id){
+  if(!confirm('ลบผู้ใช้นี้? (รวมรายงานทั้งหมด)'))return;
+  DB.set('users',(DB.get('users')||[]).filter(u=>u.id!==id));
+  DB.set('reports',(DB.get('reports')||[]).filter(r=>r.uid!==id));
+  refreshAll();renderAdmU();toast('🗑 ลบผู้ใช้แล้ว');
+}
+
+// ── MY REPORTS ──
+function renderMyR(){
+  const el=qsi('myreports'); if(!el) return;
+  const rs=(DB.get('reports')||[]).filter(r=>r.uid===CU?.id).reverse();
+  if(!rs.length){el.innerHTML='<div class="empty card"><div class="ei">📁</div><p>ยังไม่มีรายงาน</p><br><button class="btn btn-p btn-sm" onclick="go(\'analyze\',qs(\'[onclick*=analyze]\'))">📸 เริ่มวิเคราะห์</button></div>';return;}
+  el.innerHTML=rs.map(r=>`
+    <div class="card" style="margin-bottom:0.8rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;flex-wrap:wrap">
+        <div><div style="font-weight:700;color:var(--forest)">${r.species}</div><div style="font-size:0.76rem;color:var(--muted)">📍 ${r.location} · ${thDate(r.at)}</div></div>
+        <div style="display:flex;gap:0.38rem;align-items:center"><span class="rt ${r.risk}">${rl(r.risk)}</span><span class="sp ${r.status}" style="font-size:0.66rem">${{pending:'⏳ รอ',progress:'🔧 ดำเนินการ',done:'✅ เสร็จ',alert:'🚨 แจ้งแล้ว'}[r.status]}</span></div>
+      </div>
+      <div style="display:flex;gap:0.45rem;margin-top:0.6rem;font-size:0.76rem;flex-wrap:wrap;color:var(--muted)">
+        <span>🎯 AI: ${r.conf}%</span><span>🌿 CO₂: ${r.carbon} กก./ปี</span>
+        <span>⏱ ${r.urgDays===0?'ดำเนินการทันที!':r.urgDays+' วัน'}</span>
+        ${r.is360?'<span style="color:var(--blue)">🔄 360°</span>':''}
+      </div>
+      <div style="display:flex;gap:0.45rem;margin-top:0.65rem">
+        <button class="btn btn-s btn-xs" onclick="expPDF('${r.id}')">📄 PDF</button>
+        <button class="btn btn-d btn-xs" onclick="delMyR('${r.id}')">🗑 ลบ</button>
+      </div>
+    </div>`).join('');
+}
+
+function delMyR(id){
+  if(!confirm('ลบรายงานนี้?'))return;
+  DB.set('reports',(DB.get('reports')||[]).filter(r=>!(r.id===id&&r.uid===CU?.id)));
+  refreshAll();toast('🗑 ลบรายงานแล้ว');
+}
+
+// ── CHAT ──
+function initChat(){
+  const chats=DB.get('chats')||{};
+  const isAdm=CU?.role==='admin'||CU?.role==='staff';
+  if(!isAdm){
+    const rid='room_'+CU.id;
+    if(!chats[rid]) chats[rid]={uid:CU.id,uname:CU.name,msgs:[{from:'admin',text:'สวัสดีครับ/ค่ะ ยินดีให้บริการค่ะ มีอะไรให้ช่วยไหมครับ?',ts:new Date().toISOString()}]};
+    DB.set('chats',chats);
+    const el=qsi('chatrooms'); if(el) el.innerHTML=`<div class="chat-li active" onclick="openRoom('${rid}')"><div class="chav">🏛️</div><div class="chat-liinfo"><div class="chat-liname">เจ้าหน้าที่ ARBOR Ai</div><div class="chat-liprev">แตะเพื่อเริ่มสนทนา</div></div></div>`;
+    openRoom(rid);
+  } else {
+    renderAdmChatRooms();
+  }
+}
+
+function renderAdmChatRooms(){
+  const chats=DB.get('chats')||{};
+  const el=qsi('achatrooms'); if(!el) return;
+  const rooms=Object.entries(chats);
+  el.innerHTML=rooms.length?rooms.map(([id,r])=>`
+    <div class="chat-li" onclick="openAdmRoom('${id}')">
+      <div class="chav">${(r.uname||'?').charAt(0)}</div>
+      <div class="chat-liinfo"><div class="chat-liname">${r.uname||'ผู้ใช้'}</div><div class="chat-liprev">${r.msgs?.slice(-1)[0]?.text?.substring(0,28)||'—'}</div></div>
+    </div>`).join('') : '<div class="empty" style="padding:1rem"><p>ยังไม่มีข้อความ</p></div>';
+}
+
+function openRoom(rid){
+  curRoom=rid;
+  const chats=DB.get('chats')||{};
+  const room=chats[rid]||{msgs:[]};
+  qsi('chatrname').textContent='เจ้าหน้าที่ ARBOR Ai';
+  renderMsgs('chatmsgs',room.msgs,'user');
+}
+
+function openAdmRoom(rid){
+  adminRoom=rid;
+  const chats=DB.get('chats')||{};
+  const room=chats[rid]||{msgs:[]};
+  qsi('achatrname').textContent=room.uname||'ผู้ใช้';
+  document.querySelectorAll('#achatrooms .chat-li').forEach(el=>el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  renderMsgs('achatmsgs',room.msgs,'admin');
+}
+
+function renderMsgs(cid,msgs,myRole){
+  const el=qsi(cid); if(!el) return;
+  if(!msgs||!msgs.length){el.innerHTML='<div class="empty" style="margin:auto"><div class="ei">💬</div><p>ยังไม่มีข้อความ</p></div>';return;}
+  el.innerHTML=msgs.map(m=>`
+    <div style="display:flex;flex-direction:column;align-items:${m.from===myRole?'flex-end':'flex-start'}">
+      <div class="msg ${m.from===myRole?'sent':'recv'}">${m.text}
+        <div class="msg-t">${new Date(m.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+    </div>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function sendMsg(){
+  const inp=qsi('chatinp'); if(!inp||!curRoom)return;
+  const text=inp.value.trim(); if(!text)return;
+  const chats=DB.get('chats')||{};
+  if(!chats[curRoom])chats[curRoom]={uid:CU.id,uname:CU.name,msgs:[]};
+  chats[curRoom].msgs.push({from:'user',text,ts:new Date().toISOString()});
+  DB.set('chats',chats); inp.value='';
+  renderMsgs('chatmsgs',chats[curRoom].msgs,'user');
+}
+
+function adminSend(){
+  const inp=qsi('achatinp'); if(!inp||!adminRoom)return;
+  const text=inp.value.trim(); if(!text)return;
+  const chats=DB.get('chats')||{};
+  if(!chats[adminRoom])return;
+  chats[adminRoom].msgs.push({from:'admin',text,ts:new Date().toISOString()});
+  DB.set('chats',chats); inp.value='';
+  renderMsgs('achatmsgs',chats[adminRoom].msgs,'admin');
+  renderAdmChatRooms();
+}
+
+// ── NOTIFICATIONS ──
+function addNotif(title,body){
+  const ns=DB.get('notifs')||[];
+  ns.unshift({id:'n'+Date.now(),title,body,ts:new Date().toISOString(),read:false});
+  DB.set('notifs',ns.slice(0,20)); updNotifDot();
+}
+function updNotifDot(){
+  const ns=DB.get('notifs')||[];
+  const u=ns.filter(n=>!n.read).length;
+  const d=qsi('ndot'); if(d)d.style.display=u>0?'block':'none';
+}
+function toggleNotif(){
+  const p=qsi('notif-panel'); p.classList.toggle('show'); if(p.classList.contains('show'))renderNotifs();
+}
+function renderNotifs(){
+  const ns=DB.get('notifs')||[];
+  const el=qsi('notif-list');
+  el.innerHTML=ns.length?ns.map(n=>`<div class="ni ${n.read?'':'unread'}" onclick="markRead('${n.id}')"><div class="nit">${n.title}</div><div class="nib">${n.body}</div><div class="nitm">${ago(n.ts)}</div></div>`).join('') : '<div style="padding:1rem;text-align:center;color:var(--muted);font-size:0.83rem">ไม่มีการแจ้งเตือน</div>';
+}
+function markRead(id){const ns=DB.get('notifs')||[];const i=ns.findIndex(n=>n.id===id);if(i>=0){ns[i].read=true;DB.set('notifs',ns);}renderNotifs();updNotifDot();}
+function markAllRead(){DB.set('notifs',(DB.get('notifs')||[]).map(n=>({...n,read:true})));renderNotifs();updNotifDot();}
+
+// ── NAVIGATION ──
+const ptitles={home:'🏠 หน้าหลัก',analyze:'📸 วิเคราะห์ต้นไม้',map:'🗺️ แผนที่ความเสี่ยง',dash:'📊 Dashboard Analytics',enc:'📚 สารานุกรมต้นไม้',comm:'🏅 Community',chat:'💬 ติดต่อเจ้าหน้าที่',myreports:'📁 รายงานของฉัน',admin:'⚙️ Admin Panel'};
+function go(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=qsi('page-'+id); if(pg)pg.classList.add('active');
+  document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  qsi('tbtitle').textContent=ptitles[id]||id;
+  if(id==='map'&&lmap)setTimeout(()=>lmap.invalidateSize(),180);
+  if(id==='dash'){renderWeekly(DB.get('reports')||[]);renderDonut(DB.get('reports')||[]);}
+  if(id==='admin'){renderAdmR();renderAdmU();renderStaff();renderContacts();renderAdmChatRooms();}
+  if(id==='comm')renderLB();
+  if(id==='enc')renderEnc();
+  if(id==='chat')initChat();
+  if(id==='myreports')renderMyR();
+  qsi('notif-panel').classList.remove('show');
+  if(window.innerWidth<=900)qsi('sidebar').classList.remove('open');
+}
+
+// ── ADMIN TABS ──
+function atab(t,btn){
+  document.querySelectorAll('.asub').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.atab').forEach(el=>el.classList.remove('active'));
+  qsi('asub-'+t).classList.add('active'); btn.classList.add('active');
+  if(t==='ctts')renderContacts();
+  if(t==='stff')renderStaff();
+  if(t==='usrs')renderAdmU();
+  if(t==='achat')renderAdmChatRooms();
+}
+
+// ── MODAL ──
+function showModal(title,body,footer=[]){
+  qsi('m-title').textContent=title;
+  qsi('m-body').innerHTML=body;
+  qsi('m-foot').innerHTML=footer.map(f=>`<button class="btn ${f.c}" onclick="${f.fn}">${f.l}</button>`).join('');
+  qsi('modal').classList.add('show');
+}
+function closeModal(){qsi('modal').classList.remove('show');}
+function closeModalOuter(e){if(e.target===qsi('modal'))closeModal();}
+
+// ── TOAST / PROGRESS ──
+function toast(msg,type='success'){
+  const t=qsi('toast'); t.textContent=msg; t.className='toast show '+(type||'success');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',3500);
+}
+function showProg(msg='กำลังดำเนินการ...'){qsi('prog-t').textContent=msg;qsi('prog').classList.add('show');}
+function hideProg(){qsi('prog').classList.remove('show');}
+
+// ── INIT ──
+initDB();
+const sess=DB.get('session');
+if(sess){CU=sess;startApp();}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#notif-panel')&&!e.target.closest('.notif-btn'))qsi('notif-panel').classList.remove('show');
+});
+</script>
+</body>
+</html>
