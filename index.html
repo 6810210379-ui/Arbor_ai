@@ -1966,16 +1966,34 @@ function esgScore(carbon, n) {
 }
 
 // ═══════════════ DATA LAYER (Demo Storage — Supabase-ready structure) ═══════════════
-const HAS_STORAGE = (typeof window !== 'undefined' && !!window.storage);
+const SUPA_URL = 'https://phpxehsfywxviafikwuw.supabase.co'; 
+const SUPA_KEY = 'sb_publishable_SKz9FHA2hjEcA4B2RSKuuQ_ZWD4_T6T'; 
+
 async function dbGet(key, fallback) {
-  if (!HAS_STORAGE) return fallback;
-  try { const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : fallback; }
-  catch { return fallback; }
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/arbor_kv?key=eq.${key}&select=value`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const d = await r.json();
+    return d.length ? JSON.parse(d[0].value) : fallback;
+  } catch { return fallback; }
 }
+
 async function dbSet(key, value) {
-  if (!HAS_STORAGE) return;
-  try { await window.storage.set(key, JSON.stringify(value), true); } catch(e) { console.error('dbSet', key, e); }
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/arbor_kv`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value: JSON.stringify(value) })
+    });
+  } catch(e) { console.error('dbSet', e); }
 }
+
 
 // ─── HAT YAI / SONGKHLA MAP CONFIG ───────────────────────────────
 const HATYAI_CENTER = [7.0086, 100.4747];
